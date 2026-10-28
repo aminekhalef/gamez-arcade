@@ -2,7 +2,7 @@
 
 This repository contains only the built website in `site/` and its GitHub Pages workflow. The TypeScript source and room server live in the separate private `gamez-arcade-source` repository.
 
-The site is built for `https://aminekhalef.github.io/gamez-arcade/`. GitHub Pages must use **GitHub Actions** as the publishing source.
+The site is built for the custom domain `https://gamez-hub.io/`. GitHub Pages uses **GitHub Actions** as the publishing source. The domain must be registered and its DNS configured before the site can resolve.
 
 After the room server is deployed on Render, set `window.GAMEZ_API_ORIGIN` in `site/config.js` to its HTTPS origin, without a trailing slash. Until then, room creation cannot connect to the server.
 

@@ -1,0 +1,1 @@
+window.GAMEZ_API_ORIGIN = '';

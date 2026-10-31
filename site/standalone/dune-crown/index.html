@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dune Crown</title>
+<style>
+:root{--bg:#f5efe2;--fg:#2b2418;--card:#fffaf0;--line:#d9ccb0;--sand:#ecd9a8;--dune:#d6b46a;--rock:#8a8070;--oasis:#bfe0b0;--hl:#ffd23f;--mv:#7bc67b;--atk:#ff7a7a;--c0:#2a6fdb;--c1:#d83a3a;--c2:#2e9e4f;--c3:#d99a00;
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1812;--fg:#f1e8d4;--card:#2a241a;--line:#4a4130;--sand:#5a4d30;--dune:#7a6636;--rock:#4a453c;--oasis:#2f5a3a;--mv:#3f7f3f;--atk:#9c3a3a;--c0:#6aa3ff;--c1:#ff7070;--c2:#5fd187;--c3:#ffc83d;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;padding:12px}
+h1{margin:4px 0;font-size:26px;letter-spacing:1px;text-shadow:0 2px 0 var(--line)}
+.sub{margin:0 0 8px;font-size:13px;opacity:.75;text-align:center}
+.w{width:min(96vw,640px)}
+#bar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font-size:13px;font-weight:600;margin-bottom:8px}
+.chip{background:var(--card);border:2px solid var(--line);border-radius:8px;padding:3px 8px;color:var(--fg)}
+.chip i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--col);margin-right:5px}
+.chip.cur{border-color:var(--col)}.chip.dead{opacity:.35;text-decoration:line-through}
+#msg{min-height:22px;font-weight:700;margin:4px 0}
+#board{display:grid;grid-template-columns:repeat(13,1fr);gap:1px;background:var(--line);padding:2px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.c{aspect-ratio:1;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.28),transparent 65%),var(--sand);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:clamp(11px,3.3vw,22px);line-height:1;cursor:pointer;border-radius:3px;position:relative}.c:hover{filter:brightness(1.07)}
+.c small{position:absolute;right:1px;bottom:1px;background:var(--col,#555);color:#fff;border-radius:6px;padding:0 3px;font-size:9px;font-weight:700}
+.dn{background:repeating-linear-gradient(135deg,rgba(0,0,0,.09) 0 3px,transparent 3px 8px),var(--dune)}.rk{background:linear-gradient(145deg,rgba(255,255,255,.2),rgba(0,0,0,.32)),var(--rock)}.oa{background:radial-gradient(circle,rgba(80,170,255,.5) 0 35%,transparent 72%),var(--oasis)}
+.c.ow{box-shadow:inset 0 -4px 0 var(--col)}
+.c.b{box-shadow:inset 0 0 0 3px var(--col)}
+.c.u>span,.c.b>span{background:var(--col);width:78%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.55)}.c.b>span{border-radius:8px}
+.c.used{opacity:.6}
+.c.mv{outline:3px solid var(--mv);outline-offset:-3px}
+.c.at{outline:3px solid var(--atk);outline-offset:-3px;background:var(--atk)}
+.c.sp{outline:3px dashed var(--hl);outline-offset:-3px}
+.c.sel{box-shadow:inset 0 0 0 3px var(--hl)}
+#ctl,#setup{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+#setup{flex-direction:column;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+#setup h2{margin:0;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button{font:inherit;font-weight:600;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+button.on{border-color:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+button.pri{background:var(--c0);color:#fff;border-color:var(--c0)}
+button.pl{border-left:6px solid var(--col)}
+#log{font-size:13px;opacity:.85;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:70px}
+#log div{margin:2px 0}
+#how{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px 12px;overflow:auto;z-index:9}
+#how[hidden],#setup[hidden],#game[hidden]{display:none}
+#how .card{background:var(--card);color:var(--fg);border-radius:12px;padding:16px;max-width:560px;font-size:14px;line-height:1.45}
+#how h2{margin:0 0 6px}#how h3{margin:12px 0 4px;font-size:15px}
+#how ul{margin:4px 0;padding-left:20px}
+#how table{border-collapse:collapse;width:100%;font-size:13px}
+#how td,#how th{border:1px solid var(--line);padding:3px 6px;text-align:center}
+.c.fl{animation:fl .7s}@keyframes fl{from{filter:brightness(2.4) saturate(2)}to{filter:none}}.dmg{position:absolute;top:0;left:50%;color:#fff;background:#c0262d;border-radius:6px;font-size:11px;padding:0 4px;animation:fup 1.2s forwards;pointer-events:none;z-index:2}@keyframes fup{0%{transform:translate(-50%,6px);opacity:1}100%{transform:translate(-50%,-16px);opacity:0}}.c.sel>span{animation:pu 1s infinite}@keyframes pu{50%{transform:scale(1.13)}}
+.c.fg{filter:brightness(.45) saturate(.6)}
+</style>
+</head>
+<body>
+<h1>🏜️ Dune Crown</h1>
+<p class="sub">Seize the oases, raise an army, topple the rival citadels.</p>
+<div id="setup" class="w"></div>
+<div id="game" class="w" hidden>
+  <div id="bar"></div>
+  <div id="msg"></div>
+  <div id="board"></div>
+  <div id="ctl"></div>
+  <div id="log"></div>
+</div>
+<div id="how" hidden><div class="card">
+<h2>How to play</h2>
+<p><b>Goal:</b> destroy every rival citadel 🏰 (12 HP each). The last player standing wins.</p>
+<h3>On your turn</h3>
+<ul>
+<li><b>Recruit:</b> tap a unit button, then a dashed yellow tile within 2 tiles of your citadel. New units can’t act this turn.</li>
+<li><b>Move:</b> tap one of your units. Green tiles show where it can go.</li>
+<li><b>Attack:</b> red tiles are targets in range (enemy units or citadels). A unit can move, then attack, once per turn.</li>
+<li><b>End turn</b> when you’re done. Turns pass clockwise: Blue, Red, Green, Gold.</li>
+</ul>
+<h3>Units</h3>
+<table><tr><th></th><th>Cost 💧</th><th>HP</th><th>Attack</th><th>Move</th><th>Range</th></tr>
+<tr><td>🐎 Scout</td><td>2</td><td>3</td><td>1</td><td>4</td><td>1</td></tr>
+<tr><td>🛡️ Guard</td><td>3</td><td>6</td><td>2</td><td>2</td><td>1</td></tr>
+<tr><td>🏹 Archer</td><td>4</td><td>3</td><td>2</td><td>2</td><td>2</td></tr>
+<tr><td>⚔️ Knight</td><td>5</td><td>6</td><td>3</td><td>3</td><td>1</td></tr>
+<tr><td>🎯 Catapult</td><td>6</td><td>4</td><td>4</td><td>1</td><td>3</td></tr></table>
+<p>Catapults are siege units: if they move, they can’t attack that turn.</p>
+<h3>Map and economy</h3>
+<ul>
+<li>🌴 <b>Oasis:</b> end your turn standing on one to claim it. You earn 2 💧 per turn, plus 2 💧 for each oasis you hold. Others can steal it the same way.</li>
+<li>≈ <b>Dune:</b> costs 2 moves to enter. A unit standing on one takes 1 less damage (minimum 1).</li>
+<li>🪨 <b>Rock:</b> blocks movement. Units can’t pass through each other.</li>
+<li>You start with 5 💧. The map is 13×13 with four corner citadels and a central oasis.</li>
+<li>🩹 Units standing on an oasis you hold heal 1 HP at the start of your turn.</li>
+<li>🏰 Your citadel shoots 1 damage at enemies within 2 tiles at the start of your turn.</li>
+<li>⭐ A unit that makes a kill gains +1 attack and heals 2 HP (first two kills).</li>
+<li>🌫️ <b>Fog of war</b> (optional): you only see tiles within 3 of your units, 4 of your citadel and 1 of your oases. With several humans, a “pass the device” screen hides the board between turns. The AI ignores fog.</li>
+<li>🤖 <b>AI level:</b> Easy sometimes misses attacks and builds fewer units. Hard gets +2 💧 per turn and recruits stronger units.</li>
+<li>🔊 The speaker button toggles sound.</li>
+</ul>
+<h3>2 to 4 players</h3>
+<ul>
+<li>Pick 2, 3 or 4 players in the setup. Each slot can be Human or AI. Humans share one device and pass it on.</li>
+<li>There are no alliances: everyone can attack everyone.</li>
+<li>When a citadel falls, that player is out, their units vanish and their oases become free.</li>
+</ul>
+<h3>Tips</h3>
+<ul><li>Grab nearby oases early. Archers behind Guards are strong. In 3 or 4 player games, let rivals weaken each other first.</li></ul>
+<button class="pri" data-closehow>Got it</button>
+</div></div>
+<script>
+const N=13;
+const T={s:{n:'Scout',e:'🐎',c:2,hp:3,at:1,m:4,r:1},g:{n:'Guard',e:'🛡️',c:3,hp:6,at:2,m:2,r:1},a:{n:'Archer',e:'🏹',c:4,hp:3,at:2,m:2,r:2},k:{n:'Knight',e:'⚔️',c:5,hp:6,at:3,m:3,r:1},c:{n:'Catapult',e:'🎯',c:6,hp:4,at:4,m:1,r:3,siege:1}};
+const COL=['Blue','Red','Green','Gold'],CORN=[[0,12],[12,0],[0,0],[12,12]];
+let AC=null,muted=false,nt=0;
+function sfx(t){if(muted)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+const P={move:[[330,.05,'sine']],hit:[[140,.12,'square']],spawn:[[440,.06,'triangle'],[660,.08,'triangle']],cap:[[523,.07,'triangle'],[659,.07,'triangle'],[784,.12,'triangle']],boom:[[90,.35,'sawtooth']],win:[[523,.12,'triangle'],[659,.12,'triangle'],[784,.12,'triangle'],[1047,.3,'triangle']],turn:[[392,.05,'sine']]}[t];
+let at=Math.max(nt,AC.currentTime);
+P.forEach(([f,du,ty])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+du);o.connect(g);g.connect(AC.destination);o.start(at);o.stop(at+du);at+=du*.9;});
+nt=at+.05;}catch(e){}}
+let G=null,cfg={n:2,pl:['h','a','a','a'],diff:'normal',fog:false};
+let onlineMode=false,lastReported=-1,reportedFinish=false;
+function report(score,finished=false){if(!onlineMode)return;score=Math.max(0,Math.floor(score));if(score===lastReported&&(!finished||reportedFinish))return;lastReported=score;reportedFinish=reportedFinish||finished;parent.postMessage({type:'gamez-progress',game:'dune-crown',score,finished},location.origin)}
+const $=id=>document.getElementById(id);
+const d=(a,b,c,e)=>Math.abs(a-c)+Math.abs(b-e);
+const inb=(x,y)=>x>=0&&y>=0&&x<N&&y<N;
+const uAt=(x,y)=>G.units.find(u=>u.x==x&&u.y==y);
+const bAt=(x,y)=>{for(let o=0;o<G.n;o++)if(!G.dead[o]&&G.base[o].x==x&&G.base[o].y==y)return o;return -1;};
+const free=(x,y)=>inb(x,y)&&G.map[y][x]!='#'&&!uAt(x,y)&&bAt(x,y)<0;
+const human=o=>G.pl[o]=='h';
+const oases=o=>Object.values(G.own).filter(v=>v==o).length;
+const income=o=>2+2*oases(o);
+const foes=o=>[...Array(G.n).keys()].filter(i=>i!=o&&!G.dead[i]);
+function startGame(){
+  const map=Array.from({length:N},()=>Array(N).fill('.'));
+  [['O',2,9],['O',6,11],['O',4,7],['^',1,10],['^',3,9],['^',2,6],['^',5,10],['#',4,4],['#',4,8],['#',3,6]].forEach(([t,x,y])=>{for(let i=0;i<4;i++){map[y][x]=t;[x,y]=[N-1-y,x];}});
+  map[6][6]='O';
+  const n=cfg.n;
+  G={id:Math.random(),n,pl:cfg.pl.slice(0,n),map,units:[],base:CORN.slice(0,n).map(c=>({x:c[0],y:c[1],hp:12})),
+     w:Array(n).fill(5),own:{},dead:{},turn:0,first:new Set([...Array(n).keys()]),sel:null,sp:null,over:-1,fl:{},dm:{},fog:cfg.fog,diff:cfg.diff,hide:0,log:['Game on. Claim the oases!']};
+  G.hide=G.fog&&G.pl.filter(x=>x=='h').length>1&&human(0)?1:0;beginTurn(0);render();
+}
+function beginTurn(o){
+  if(G.first.has(o))G.first.delete(o);else G.w[o]+=income(o)+(!human(o)&&G.diff=='hard'?2:0);
+  G.units.filter(u=>u.o==o).forEach(u=>{u.moved=u.acted=0;if(G.own[u.x+','+u.y]==o&&u.hp<u.mh)u.hp++;});
+  const cb=G.base[o],ex=G.units.filter(v=>v.o!=o&&d(v.x,v.y,cb.x,cb.y)<=2);
+  ex.forEach(v=>{v.hp--;G.fl[v.x+','+v.y]=1;G.dm[v.x+','+v.y]=1;});
+  if(ex.length)G.log.unshift(`🏰 ${COL[o]}’s citadel fires on intruders!`);
+  G.units=G.units.filter(v=>v.hp>0);
+  if(!human(o)){const id=G.id;setTimeout(()=>{if(G&&G.id==id)ai();},650);}
+}
+function nextTurn(){
+  let o=G.turn;do{o=(o+1)%G.n;}while(G.dead[o]);
+  G.turn=o;G.sel=null;G.sp=null;G.log.unshift(`${COL[o]}’s turn.`);G.hide=G.fog&&human(o)&&G.pl.filter(x=>x=='h').length>1?1:0;if(human(o))sfx('turn');beginTurn(o);render();
+}
+function reach(u){
+  const R={};R[u.x+','+u.y]=0;const q=[[u.x,u.y]];
+  while(q.length){const [x,y]=q.shift(),c=R[x+','+y];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+      const nx=x+dx,ny=y+dy;if(!free(nx,ny))continue;
+      const nc=c+(G.map[ny][nx]=='^'?2:1);if(nc>u.m)continue;
+      const k=nx+','+ny;if(R[k]===undefined||nc<R[k]){R[k]=nc;q.push([nx,ny]);}
+    }}
+  return R;
+}
+function tg(u,x,y){
+  const r=[];
+  G.units.filter(v=>v.o!=u.o&&d(x,y,v.x,v.y)<=u.r).forEach(v=>r.push({u:v,x:v.x,y:v.y}));
+  foes(u.o).forEach(o=>{const b=G.base[o];if(d(x,y,b.x,b.y)<=u.r)r.push({b:o,x:b.x,y:b.y});});
+  return r;
+}
+function hit(u,t){
+  const nm=COL[u.o];sfx('hit');
+  if(t.u){
+    let dm=u.at;if(G.map[t.y][t.x]=='^')dm=Math.max(1,dm-1);
+    t.u.hp-=dm;G.fl[t.x+','+t.y]=1;G.dm[t.x+','+t.y]=dm;G.log.unshift(`${nm} ${u.e} hits ${COL[t.u.o]} ${t.u.e} for ${dm}`);
+    if(t.u.hp<=0){if((u.k=(u.k||0)+1)<=2){u.at++;u.hp=Math.min(u.mh,u.hp+2);G.log.unshift(`⭐ ${u.e} grows stronger`);}G.units=G.units.filter(v=>v!==t.u);G.log.unshift(`${COL[t.u.o]} ${t.u.e} has fallen.`);}
+  }else{
+    const b=G.base[t.b];b.hp-=u.at;G.fl[t.x+','+t.y]=1;G.dm[t.x+','+t.y]=u.at;G.log.unshift(`${nm} ${u.e} strikes ${COL[t.b]}’s citadel (${Math.max(0,b.hp)} left)`);
+    if(b.hp<=0)eliminate(t.b);
+  }
+}
+function eliminate(v){
+  G.dead[v]=1;sfx('boom');G.units=G.units.filter(u=>u.o!=v);
+  for(const k in G.own)if(G.own[k]==v)delete G.own[k];
+  G.log.unshift(`💥 ${COL[v]} is eliminated!`);
+  const al=[...Array(G.n).keys()].filter(i=>!G.dead[i]);
+  if(al.length==1){G.over=al[0];sfx('win');}
+}
+function capture(o){G.units.filter(u=>u.o==o&&G.map[u.y][u.x]=='O').forEach(u=>{
+  const k=u.x+','+u.y;if(G.own[k]!=o){G.own[k]=o;sfx('cap');G.log.unshift(`${COL[o]} claims an oasis 🌴`);}});}
+function spawnTiles(o){const b=G.base[o],r=[];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){const k=d(x,y,b.x,b.y);if(k>=1&&k<=2&&free(x,y))r.push([x,y]);}return r;}
+function spawn(o,t,x,y){G.units.push(Object.assign({o,t,x,y,moved:1,acted:1,mh:T[t].hp},T[t]));}
+function endTurn(){
+  if(G.over>=0||!human(G.turn))return;
+  capture(G.turn);nextTurn();
+}
+function ai(){
+  const o=G.turn;if(G.over>=0||human(o))return;
+  const fb=foes(o).map(i=>G.base[i]);
+  const nearFoe=(x,y)=>fb.slice().sort((a,b)=>d(x,y,a.x,a.y)-d(x,y,b.x,b.y))[0];
+  let n=G.units.filter(u=>u.o==o).length;
+  while(n<({easy:6,normal:10,hard:12})[G.diff]){
+    const opts=Object.keys(T).filter(k=>T[k].c<=G.w[o]);if(!opts.length)break;
+    const pool=G.diff=='hard'?opts.slice(-2):opts,k=pool[Math.random()*pool.length|0],ts=spawnTiles(o);if(!ts.length)break;
+    ts.sort((a,b)=>{const p=nearFoe(a[0],a[1]),q=nearFoe(b[0],b[1]);return d(a[0],a[1],p.x,p.y)-d(b[0],b[1],q.x,q.y);});
+    spawn(o,k,ts[0][0],ts[0][1]);G.w[o]-=T[k].c;n++;
+  }
+  let i=0;
+  for(const u of G.units.filter(v=>v.o==o&&!v.acted)){
+    i++;if(G.over>=0)break;
+    const R=reach(u),A=u.siege?{[u.x+','+u.y]:0}:R;let best=null,bs=-1e9;
+    for(const k in A){const [x,y]=k.split(',').map(Number);
+      for(const t of tg(u,x,y)){
+        let s=t.b!==undefined?60+(12-G.base[t.b].hp):(t.u.hp<=u.at?50:20-t.u.hp);
+        s-=R[k]*.5;if(G.map[y][x]=='^')s+=2;
+        if(s>bs){bs=s;best={x,y,t};}
+      }}
+    if(best&&G.diff=='easy'&&Math.random()<.35)best=null;
+    if(best){u.x=best.x;u.y=best.y;hit(u,best.t);}
+    else{
+      const os=[];for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(G.map[y][x]=='O'&&G.own[x+','+y]!=o)os.push({x,y});
+      os.sort((a,b)=>d(u.x,u.y,a.x,a.y)-d(u.x,u.y,b.x,b.y));
+      const ob=(os.length&&i<=3)?os[0]:nearFoe(u.x,u.y);
+      let bk=null,bd=1e9;
+      for(const k in R){const [x,y]=k.split(',').map(Number);const v=d(x,y,ob.x,ob.y)+Math.random()*.4;if(v<bd){bd=v;bk=[x,y];}}
+      if(bk){u.x=bk[0];u.y=bk[1];}
+    }
+    u.moved=u.acted=1;
+  }
+  capture(o);
+  if(G.over<0)nextTurn();else render();
+}
+function click(x,y){
+  const me=G.turn;if(G.over>=0||!human(me)||G.hide)return;
+  if(G.sp){
+    if(spawnTiles(me).some(t=>t[0]==x&&t[1]==y)){spawn(me,G.sp,x,y);G.w[me]-=T[G.sp].c;sfx('spawn');}
+    G.sp=null;render();return;
+  }
+  const u=uAt(x,y),s=G.sel;
+  if(s){
+    if(!s.acted){const t=tg(s,s.x,s.y).find(t=>t.x==x&&t.y==y);
+      if(t){hit(s,t);s.acted=s.moved=1;G.sel=null;render();return;}}
+    if(!s.moved&&!u){const R=reach(s);
+      if(R[x+','+y]!==undefined){s.x=x;s.y=y;s.moved=1;if(s.siege)s.acted=1;sfx('move');render();return;}}
+  }
+  G.sel=(u&&u.o==me&&!(u.moved&&u.acted))?u:null;render();
+}
+function vis(v){
+  if(!G.fog||v<0)return null;const s=new Set();
+  const add=(x,y,r)=>{for(let j=-r;j<=r;j++)for(let i=-r;i<=r;i++)if(Math.abs(i)+Math.abs(j)<=r&&inb(x+i,y+j))s.add((x+i)+','+(y+j));};
+  G.units.filter(u=>u.o==v).forEach(u=>add(u.x,u.y,3));add(G.base[v].x,G.base[v].y,4);
+  for(const k in G.own)if(G.own[k]==v){const [x,y]=k.split(',').map(Number);add(x,y,1);}
+  return s;
+}
+function renderSetup(){
+  $('setup').innerHTML=`<h2>New game</h2><div class="row">${[2,3,4].map(k=>`<button data-n="${k}" class="${cfg.n==k?'on':''}">${k} players</button>`).join('')}</div>
+  <div class="row">${[...Array(cfg.n).keys()].map(i=>`<button class="pl" data-slot="${i}" style="--col:var(--c${i})">${COL[i]}: ${cfg.pl[i]=='h'?'👤 Human':'🤖 AI'}</button>`).join('')}</div>
+  <div class="row"><span>AI level:</span>${['easy','normal','hard'].map(k=>`<button data-d="${k}" class="${cfg.diff==k?'on':''}">${k}</button>`).join('')}<button data-fog class="${cfg.fog?'on':''}">🌫️ Fog of war: ${cfg.fog?'on':'off'}</button></div>
+  <div class="row"><button class="pri" data-start>Start</button><button data-how>How to play</button></div>`;
+}
+function render(){
+  $('setup').hidden=!!G;$('game').hidden=!G;
+  if(!G){renderSetup();return;}
+  const me=G.turn,mine=human(me)&&G.over<0&&!G.hide,s=G.sel,mv=new Set(),at=new Set(),sp=new Set();
+  const hv=G.pl.indexOf('h'),viewer=human(me)?me:(hv>=0&&!G.dead[hv]?hv:-1),V=G.over>=0?null:(G.hide?new Set():vis(viewer));
+  if(mine){
+    if(s){if(!s.moved)Object.keys(reach(s)).forEach(k=>mv.add(k));
+      if(!s.acted)tg(s,s.x,s.y).forEach(t=>at.add(t.x+','+t.y));}
+    if(G.sp)spawnTiles(me).forEach(t=>sp.add(t[0]+','+t[1]));
+  }
+  let h='';
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const k=x+','+y,m=G.map[y][x],u=V&&!V.has(k)?null:uAt(x,y),b=bAt(x,y);
+    let cl='c '+(m=='^'?'dn':m=='#'?'rk':m=='O'?'oa':''),inner='',col='';
+    if(m=='O'){inner='🌴';if(G.own[k]!==undefined){cl+=' ow';col=G.own[k];}}
+    if(m=='^')inner='<span style="opacity:.5">≈</span>';
+    if(m=='#')inner='🪨';
+    for(let o=0;o<G.n;o++){const B=G.base[o];if(B.x==x&&B.y==y){
+      if(G.dead[o])inner='🏚️';else{cl+=' b';col=o;inner=`<span>🏰</span><small>${B.hp}</small>`;}}}
+    if(u){cl+=' u'+(u.moved&&u.acted&&u.o==me&&mine?' used':'');col=u.o;inner=`<span>${u.e}</span><small>${u.hp}</small>`;}
+    if(s&&s===u)cl+=' sel';
+    if(mv.has(k)&&!u)cl+=' mv';
+    if(at.has(k))cl+=' at';
+    if(sp.has(k))cl+=' sp';
+    if(V&&!V.has(k))cl+=' fg';
+    if(G.fl[k])cl+=' fl';
+    if(G.dm[k])inner+=`<b class="dmg">-${G.dm[k]}</b>`;
+    h+=`<div class="${cl}" data-x="${x}" data-y="${y}"${col!==''?` style="--col:var(--c${col})"`:''}>${inner}</div>`;
+  }
+  $('board').innerHTML=h;G.fl={};G.dm={};
+  $('bar').innerHTML=[...Array(G.n).keys()].map(i=>`<span class="chip ${i==me&&G.over<0?'cur':''} ${G.dead[i]?'dead':''}" style="--col:var(--c${i})"><i></i>${COL[i]}${human(i)?'':' 🤖'} ${V&&i!=viewer?'':'💧'+G.w[i]+' '}🌴${oases(i)} 🏰${Math.max(0,G.base[i].hp)}</span>`).join('');
+  $('msg').textContent=G.over>=0?`🏆 ${COL[G.over]} wins the Dune Crown!`:(G.hide?`Pass the device to ${COL[me]}`:human(me)?`${COL[me]}’s turn (+${income(me)} 💧 per turn)`:`${COL[me]} is plotting…`);
+  if(onlineMode){const score=G.base[1]?12-Math.max(0,G.base[1].hp):0;report(score,G.over>=0)}
+  $('ctl').innerHTML=G.hide?`<button class="pri" data-reveal>👁 Reveal ${COL[me]}’s view</button>`:Object.keys(T).map(k=>`<button data-s="${k}" class="${G.sp==k?'on':''}" ${(!mine||T[k].c>G.w[me])?'disabled':''}>${T[k].e} ${T[k].n} · ${T[k].c}💧</button>`).join('')
+    +`<button class="pri" data-end ${mine?'':'disabled'}>End turn</button><button data-mute>${muted?'🔇':'🔊'}</button><button data-new>New game</button><button data-how>How to play</button>`;
+  $('log').innerHTML=G.log.slice(0,5).map(l=>`<div>${l}</div>`).join('');
+}
+$('board').addEventListener('click',e=>{const c=e.target.closest('.c');if(c&&G)click(+c.dataset.x,+c.dataset.y);});
+document.body.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  if('how' in b.dataset)$('how').hidden=false;
+  else if('closehow' in b.dataset)$('how').hidden=true;
+  else if(b.dataset.n){cfg.n=+b.dataset.n;render();}
+  else if(b.dataset.slot!==undefined){const i=+b.dataset.slot;cfg.pl[i]=cfg.pl[i]=='h'?'a':'h';render();}
+  else if(b.dataset.d){cfg.diff=b.dataset.d;render();}
+  else if('fog' in b.dataset){cfg.fog=!cfg.fog;render();}
+  else if('reveal' in b.dataset){G.hide=0;render();}
+  else if('mute' in b.dataset){muted=!muted;render();}
+  else if('start' in b.dataset){sfx('turn');startGame();}
+  else if(b.dataset.s){G.sp=G.sp==b.dataset.s?null:b.dataset.s;G.sel=null;render();}
+  else if('end' in b.dataset)endTurn();
+  else if('new' in b.dataset){G=null;render();}
+});
+addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.type!=='gamez-online-start')return;onlineMode=true;lastReported=-1;reportedFinish=false;cfg={n:2,pl:['h','a','a','a'],diff:'normal',fog:false};startGame();report(0)});
+render();
+</script>
+</body>
+</html>

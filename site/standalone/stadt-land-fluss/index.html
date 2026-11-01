@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<title>Stadt, Land, Fluss</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#EEF3F7;--grid:#CFDBE6;--ink:#1B2A49;--soft:#5B6B85;--mark:#FFE45C;--on-mark:#1B2A49;--red:#D64550;--ok:#1E8E5A;--card:#FFFFFF;--line:#B9C8D8;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#14203A;--grid:#21345C;--ink:#EAF0FA;--soft:#9FB0CC;--card:#1B2C50;--line:#3A5080;--ok:#4CC88B;--red:#F0717B;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#14203A;--grid:#21345C;--ink:#EAF0FA;--soft:#9FB0CC;--card:#1B2C50;--line:#3A5080;--ok:#4CC88B;--red:#F0717B;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:26px 26px;color:var(--ink);font-family:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;font-size:17px;line-height:1.5}
+.sheet{position:relative;max-width:540px;min-height:100%;margin:0 auto;padding:18px 18px 40px;padding-inline:60px 18px}
+.sheet::before{content:"";position:absolute;inset-block:0;inset-inline-start:44px;width:2px;background:var(--red);opacity:.6}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}
+h1{margin:0;font-size:1.5rem;font-weight:800;line-height:1.2}
+nav{display:flex;gap:6px}
+button{font:inherit;cursor:pointer;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.lg{border:1.5px solid var(--line);background:var(--card);border-radius:8px;padding:2px 10px;font-size:.9rem}
+.lg.on{background:var(--mark);color:var(--on-mark);border-color:var(--on-mark);font-weight:600}
+p{margin:0 0 14px}
+.soft{color:var(--soft);font-size:.92rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 6px}
+.chip{border:1.5px solid var(--ink);background:var(--card);border-radius:20px;padding:4px 16px}
+.chip.on{background:var(--mark);color:var(--on-mark);font-weight:600}
+.btn{display:block;width:100%;margin-top:18px;border:0;border-radius:12px;background:var(--ink);color:var(--paper);padding:13px 18px;font-size:1.1rem;font-weight:800}
+.btn.stop{background:var(--red);color:#fff}
+.bar{display:flex;justify-content:space-between;align-items:baseline;font-weight:600}
+#tm{font-size:2rem;font-weight:800;min-width:2.4ch;text-align:center}
+#tm.low{color:var(--red)}
+.letter{width:150px;height:150px;margin:6px auto 16px;display:grid;place-items:center;border:5px solid var(--red);border-radius:52% 48% 46% 54%/48% 54% 46% 52%;background:var(--mark);color:var(--on-mark);font-family:"Caveat","Cairo",cursive;font-size:6.5rem;font-weight:700;line-height:1}
+.letter.ar{font-family:"Cairo",sans-serif;font-weight:800;font-size:5rem}
+.letter.set{animation:stamp .35s ease-out}
+@keyframes stamp{from{transform:scale(1.35) rotate(-9deg)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.letter.set{animation:none}}
+label{display:block;margin-bottom:10px}
+label span{display:block;font-weight:600;font-size:.95rem}
+input{width:100%;border:0;border-bottom:2px solid var(--ink);background:var(--card);color:var(--ink);font:inherit;font-size:1.25rem;padding:6px 8px;border-radius:6px 6px 0 0}
+ul{list-style:none;margin:0;padding:0}
+li{display:grid;grid-template-columns:5.5rem 1fr 44px;gap:8px;align-items:center;padding:8px 0;border-bottom:1.5px solid var(--line)}
+li .c{font-size:.9rem;color:var(--soft)}
+li .a{font-size:1.15rem;font-weight:600;overflow-wrap:anywhere}
+li.bad .a{text-decoration:line-through;color:var(--soft)}
+li small{display:block;font-weight:400;font-size:.8rem;color:var(--red)}
+li button{width:44px;height:44px;border-radius:50%;border:2px solid var(--ok);background:transparent;color:var(--ok);font-size:1.2rem;font-weight:800}
+li button[aria-pressed="false"],li button:disabled{border-color:var(--red);color:var(--red)}
+li button:disabled{opacity:.6;cursor:default}
+.sum{margin-top:14px;font-weight:600}
+.big{font-size:3.6rem;font-weight:800;line-height:1.1;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="sheet"><div id="app"></div></div>
+<script>
+const T={
+de:{dir:"ltr",title:"Stadt, Land, Fluss",intro:"Ein Buchstabe, 90 Sekunden. Schreibe zu jeder Kategorie ein Wort, das mit diesem Buchstaben beginnt.",cats:["Stadt","Land","Fluss","Name","Tier"],pick:"Kategorien (mindestens drei)",start:"Spiel starten",round:"Runde",pts:"Punkte",stop:"Stopp!",next:"Nächste Runde",fin:"Ergebnis ansehen",rev:"Tippe auf ein Häkchen, wenn eine Antwort nicht zählen soll.",empty:"leer",wrong:"falscher Anfangsbuchstabe",bonus:"Zeitbonus",total:"Gesamt",best:"Bestwert",again:"Nochmal spielen",modes:["Stadt, Land, Fluss","Bent w Wled"],bw:{title:"Bent w Wled",intro:"Die tunesische Variante: Ein Buchstabe, 90 Sekunden. Finde Mädchenname, Jungenname, Tier, Pflanze, Ding und Land, die mit diesem Buchstaben beginnen.",cats:["Mädchen","Junge","Tier","Pflanze","Ding","Land"]},your:"Dein Buchstabe",rules:"10 Punkte pro gültiger Antwort. Zeitbonus, wenn du mit allen Kategorien vor Ablauf stoppst."},
+en:{dir:"ltr",title:"City, Country, River",intro:"One letter, 90 seconds. Write a word for every category that starts with that letter.",cats:["City","Country","River","Name","Animal"],pick:"Categories (at least three)",start:"Start game",round:"Round",pts:"Points",stop:"Stop!",next:"Next round",fin:"See results",rev:"Tap a check mark if an answer should not count.",empty:"empty",wrong:"wrong first letter",bonus:"Time bonus",total:"Total",best:"Best",again:"Play again",modes:["City, Country, River","Bent w Wled"],bw:{title:"Bent w Wled",intro:"The Tunisian version: one letter, 90 seconds. Find a girl’s name, boy’s name, animal, plant, object and country that start with that letter.",cats:["Girl","Boy","Animal","Plant","Object","Country"]},your:"Your letter",rules:"10 points per valid answer. Time bonus if you stop early with every category filled."},
+ar:{dir:"rtl",title:"مدينة، دولة، نهر",intro:"حرف واحد و٩٠ ثانية. اكتب لكل فئة كلمة تبدأ بهذا الحرف.",cats:["مدينة","دولة","نهر","اسم","حيوان"],pick:"الفئات (ثلاث على الأقل)",start:"ابدأ اللعب",round:"الجولة",pts:"النقاط",stop:"توقف!",next:"الجولة التالية",fin:"عرض النتيجة",rev:"اضغط على علامة الصح إذا كان يجب ألا تُحتسب الإجابة.",empty:"فارغ",wrong:"حرف البداية خاطئ",bonus:"مكافأة الوقت",total:"المجموع",best:"أفضل نتيجة",again:"العب مرة أخرى",modes:["مدينة، دولة، نهر","بنت و ولد"],bw:{title:"بنت و ولد",intro:"النسخة التونسية: حرف واحد و٩٠ ثانية. اكتب اسم بنت وولد وحيوان ونبات وجماد وبلاد تبدا بالحرف.",cats:["بنت","ولد","حيوان","نبات","جماد","بلاد"]},your:"حرفك",rules:"١٠ نقاط لكل إجابة صحيحة. مكافأة إذا أوقفت الجولة مبكرًا وكل الفئات ممتلئة."}
+};
+const NAMES={de:"Deutsch",en:"English",ar:"العربية"};
+const LET={de:[..."ABCDEFGHIJKLMNOPRSTUVWZ"],en:[..."ABCDEFGHIJKLMNOPRSTUVW"],ar:[..."ابتجحخدرزسشصطعغفقكلمنهوي"]};
+const ROUNDS=5,SECS=90;
+const app=document.getElementById("app");
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let lang=store.get("slf-lang");
+if(!T[lang])lang=(navigator.language||"de").slice(0,2);
+if(!T[lang])lang="de";
+let S={mode:0,cats:[0,1,2],round:0,score:0,letter:"",used:[],phase:"start",ans:[],rej:{},left:0,early:false,hint:false};
+let timer=null,endAt=0;
+let online=false,onlineLetters=[];
+const t=()=>T[lang];
+const CL=()=>S.mode?t().bw.cats:t().cats;
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function norm(s){
+  s=s.trim().toLowerCase();
+  if(lang==="ar"){
+    s=s.replace(/[\u064B-\u0652\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه");
+    if(s.length>3&&s.startsWith("ال"))s=s.slice(2);
+    return s;
+  }
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+const LAT={"ا":["a","e","i","o","u","2"],"ب":["b"],"ت":["t"],"ج":["j","g"],"ح":["7","h"],"خ":["5","kh","7'"],"د":["d"],"ر":["r"],"ز":["z"],"س":["s"],"ش":["ch","sh","c"],"ص":["s","9'"],"ط":["t","6"],"ع":["3","a"],"غ":["gh","8","3'"],"ف":["f"],"ق":["9","q","k"],"ك":["k"],"ل":["l"],"م":["m"],"ن":["n"],"ه":["h"],"و":["w","o","u"],"ي":["y","i"]};
+const ARH="تقدر تكتب بالحروف اللاتينية: 3 = ع، 7 = ح، 9 = ق، 5 = خ، 8 = غ";
+const hintLat=()=>lang==="ar"&&LAT[S.letter]?`<p class="soft" style="text-align:center;margin:-6px 0 14px">${ARH}<br><span dir="ltr"><b>${LAT[S.letter].join(" / ")}</b></span></p>`:"";
+const valid=a=>{
+  const n=norm(a);
+  if(n.length<2)return false;
+  if(n[0]===norm(S.letter))return true;
+  if(lang==="ar"&&LAT[S.letter]){
+    const l=a.trim().toLowerCase().replace(/^(el|al)[\s-]+/,"");
+    return /^[a-z0-9]/.test(l)&&LAT[S.letter].some(p=>l.startsWith(p));
+  }
+  return false;
+};
+function header(sw){
+  return `<header><h1>${S.mode?t().bw.title:t().title}</h1>${sw?`<nav aria-label="Language">${Object.keys(T).map(l=>`<button class="lg ${l===lang?"on":""}" data-a="lang" data-l="${l}" lang="${l}">${NAMES[l]}</button>`).join("")}</nav>`:""}</header>`;
+}
+function setLang(l){
+  lang=l;store.set("slf-lang",l);
+  document.documentElement.lang=l;document.documentElement.dir=T[l].dir;
+  document.title=T[l].title;
+}
+function render(){
+  const x=t(),ph=S.phase;
+  if(ph==="start"){
+    const best=store.get("slf-best");
+    app.innerHTML=header(true)+`<div class="chips" role="group">${x.modes.map((m,i)=>`<button class="chip ${S.mode===i?"on":""}" data-a="mode" data-i="${i}" aria-pressed="${S.mode===i}">${m}</button>`).join("")}</div><p>${S.mode?x.bw.intro:x.intro}</p><p class="soft">${x.rules}</p>${lang==="ar"?`<p class="soft">${ARH}</p>`:""}
+    <p style="margin-bottom:0"><b>${x.pick}</b></p>
+    <div class="chips">${CL().map((c,i)=>`<button class="chip ${S.cats.includes(i)?"on":""}" data-a="cat" data-i="${i}" aria-pressed="${S.cats.includes(i)}">${c}</button>`).join("")}</div>
+    ${S.hint?`<p class="soft" style="color:var(--red)">${x.pick}</p>`:""}
+    ${best?`<p class="soft">${x.best}: ${best}</p>`:""}
+    <button class="btn" data-a="start">${x.start}</button>`;
+  }else if(ph==="roll"){
+    app.innerHTML=header(false)+`<div class="bar"><span>${x.round} ${S.round+1}/${ROUNDS}</span><span>${x.pts} ${S.score}</span></div><p style="text-align:center;margin:18px 0 6px">${x.your}</p><div class="letter ${lang==="ar"?"ar":""}" id="big">?</div>`;
+  }else if(ph==="play"){
+    app.innerHTML=header(false)+`<div class="bar"><span>${x.round} ${S.round+1}/${ROUNDS}</span><b id="tm">${SECS}</b><span>${x.pts} ${S.score}</span></div>
+    <div class="letter ${lang==="ar"?"ar":""}">${S.letter}</div>${hintLat()}
+    ${S.cats.map((c,j)=>`<label><span>${CL()[c]}</span><input id="i${j}" dir="auto" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="${j===S.cats.length-1?"done":"next"}"></label>`).join("")}
+    <button class="btn stop" data-a="stop">${x.stop}</button>`;
+    document.getElementById("i0").focus();
+  }else if(ph==="review"){
+    const r=tally();
+    app.innerHTML=header(false)+`<div class="bar"><span>${x.round} ${S.round+1}/${ROUNDS}</span><span>${x.pts} ${S.score}</span></div>
+    <div class="letter ${lang==="ar"?"ar":""}" style="width:90px;height:90px;font-size:${lang==="ar"?"3rem":"3.6rem"}">${S.letter}</div>
+    <p class="soft">${x.rev}</p>
+    <ul>${S.cats.map((c,j)=>{const a=S.ans[j],e=!a.trim(),ok=valid(a),on=ok&&!S.rej[j];
+      return `<li class="${on?"":"bad"}"><span class="c">${CL()[c]}</span><span class="a" dir="auto">${e?"—":esc(a)}${!ok?`<small>${e?x.empty:x.wrong}</small>`:""}</span><button data-a="tog" data-i="${j}" aria-pressed="${on}" ${ok?"":"disabled"} aria-label="${CL()[c]}">${on?"✓":"✗"}</button></li>`}).join("")}</ul>
+    <p class="sum">+${r.pts}${r.bonus?` · ${x.bonus} +${r.bonus}`:""}</p>
+    <button class="btn" data-a="next">${S.round+1<ROUNDS?x.next:x.fin}</button>`;
+  }else{
+    const best=Math.max(+store.get("slf-best")||0,S.score);store.set("slf-best",best);
+    app.innerHTML=header(true)+`<p>${x.total}</p><div class="big">${S.score}</div><p class="soft">${x.best}: ${best}</p><button class="btn" data-a="start">${x.again}</button>`;
+  }
+}
+function tally(){
+  let n=0;S.cats.forEach((c,j)=>{if(valid(S.ans[j])&&!S.rej[j])n++});
+  const bonus=S.early&&n===S.cats.length?Math.floor(S.left/5):0;
+  return{pts:n*10+bonus,bonus};
+}
+function newRound(){
+  const pool=LET[lang].filter(l=>!S.used.includes(l));
+  const fin=online&&onlineLetters[S.round]?onlineLetters[S.round]:pool[Math.floor(Math.random()*pool.length)];
+  S.used.push(fin);S.phase="roll";render();
+  const el=document.getElementById("big"),all=LET[lang];
+  const done=()=>{S.letter=fin;el.textContent=fin;el.classList.add("set");setTimeout(startPlay,700)};
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){done();return}
+  let n=0;const iv=setInterval(()=>{el.textContent=all[Math.floor(Math.random()*all.length)];if(++n>16){clearInterval(iv);done()}},70);
+}
+function startPlay(){
+  S.phase="play";S.ans=[];S.rej={};S.early=false;render();
+  endAt=Date.now()+SECS*1000;
+  clearInterval(timer);
+  timer=setInterval(()=>{
+    const left=Math.max(0,Math.ceil((endAt-Date.now())/1000)),el=document.getElementById("tm");
+    if(el){el.textContent=left;el.classList.toggle("low",left<=10)}
+    if(left<=0)stop(false);
+  },250);
+}
+function stop(early){
+  if(S.phase!=="play")return;
+  clearInterval(timer);
+  S.left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+  S.early=early;
+  S.ans=S.cats.map((c,j)=>document.getElementById("i"+j).value);
+  S.phase="review";render();
+}
+app.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;
+  const a=b.dataset.a,i=+b.dataset.i;
+  if(a==="lang"){setLang(b.dataset.l);render()}
+  else if(a==="mode"){S.mode=i;S.cats=i?[0,1,2,3,4,5]:[0,1,2];S.hint=false;render()}
+  else if(a==="cat"){
+    if(S.cats.includes(i)){if(S.cats.length<=3){S.hint=true}else{S.cats=S.cats.filter(k=>k!==i);S.hint=false}}
+    else{S.cats=[...S.cats,i].sort();S.hint=false}
+    render();
+  }
+  else if(a==="start"){S.round=0;S.score=0;S.used=[];newRound()}
+  else if(a==="stop")stop(S.ans.length===0&&S.cats.every((c,j)=>document.getElementById("i"+j).value.trim()));
+  else if(a==="tog"){S.rej[i]=!S.rej[i];render()}
+  else if(a==="next"){
+    S.score+=tally().pts;
+    if(online)parent.postMessage({type:"gamez-progress",game:"stadt-land-fluss",score:S.score,finished:S.round+1>=ROUNDS},location.origin);
+    if(S.round+1<ROUNDS){S.round++;newRound()}else{S.phase="end";render()}
+  }
+});
+app.addEventListener("keydown",e=>{
+  if(e.key!=="Enter"||!e.target.id||e.target.id[0]!=="i")return;
+  const j=+e.target.id.slice(1),nx=document.getElementById("i"+(j+1));
+  if(nx)nx.focus();else document.querySelector('[data-a="stop"]').click();
+});
+window.addEventListener("message",e=>{
+  if(e.origin!==location.origin||e.source!==parent||e.data?.type!=="gamez-online-start"||e.data?.game!=="stadt-land-fluss")return;
+  online=true;setLang("en");
+  let seed=(Number(e.data.seed)||1)>>>0,pool=[...LET.en];
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+  onlineLetters=[];while(onlineLetters.length<ROUNDS&&pool.length){const i=Math.floor(random()*pool.length);onlineLetters.push(pool.splice(i,1)[0])}
+  S={mode:0,cats:[0,1,2],round:0,score:0,letter:"",used:[],phase:"start",ans:[],rej:{},left:0,early:false,hint:false};render();
+});
+setLang(lang);render();
+</script>
+</body>
+</html>

@@ -45,14 +45,11 @@ button:focus-visible{outline:3px solid var(--ac2);outline-offset:2px}
 <script>
 const $=s=>document.querySelector(s),app=$('#app'),rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a,pick=a=>a[rnd(0,a.length-1)];
 const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
-let lang=(navigator.language||'en').slice(0,2)==='de'?'de':'en',T=[],queue=[],mem0={};
+let T=[],queue=[],mem0={};
 const L={en:{sub:'Adaptive brain training: the game gets harder as you improve',bfi:'Brain Fitness Index',work:'Start daily workout',score:'Score',again:'Play again',next:'Next game',menu:'Menu',nb:'New best!',best:'Best',watch:'Watch…',go:'Your turn',odd:'Tap the odd one out',
 mem:'Pattern Memory',memd:'Repeat the growing sequence',stroop:'Color Clash',stroopd:'Tap the ink color, not the word',odd2:'Odd One Out',oddd:'Spot the slightly different shade',seq:'Number Series',seqd:'Find the next number',math:'Quick Math',mathd:'Mental arithmetic under pressure',
-cats:{memory:'Memory',attention:'Attention',perception:'Perception',logic:'Logic',speed:'Thinking speed'},colors:['Red','Blue','Green','Yellow','Purple','Orange']},
-de:{sub:'Adaptives Gehirntraining: Das Spiel wird mit deinem Können schwerer',bfi:'Brain-Fitness-Index',work:'Tägliches Training starten',score:'Punkte',again:'Nochmal',next:'Nächstes Spiel',menu:'Menü',nb:'Neuer Bestwert!',best:'Bestwert',watch:'Schau zu…',go:'Du bist dran',odd:'Tippe das abweichende Feld',
-mem:'Muster merken',memd:'Wiederhole die wachsende Folge',stroop:'Farbduell',stroopd:'Tippe die Schriftfarbe, nicht das Wort',odd2:'Der Ausreißer',oddd:'Finde den leicht anderen Farbton',seq:'Zahlenreihe',seqd:'Finde die nächste Zahl',math:'Kopfrechnen',mathd:'Rechnen unter Zeitdruck',
-cats:{memory:'Gedächtnis',attention:'Aufmerksamkeit',perception:'Wahrnehmung',logic:'Logik',speed:'Denktempo'},colors:['Rot','Blau','Grün','Gelb','Lila','Orange']}};
-const D=()=>L[lang],C=['#e03b3b','#2f6fe0','#22a05a','#e0b020','#8e44c8','#ee7d1f'];
+cats:{memory:'Memory',attention:'Attention',perception:'Perception',logic:'Logic',speed:'Thinking speed'},colors:['Red','Blue','Green','Yellow','Purple','Orange']}};
+const D=()=>L.en,C=['#e03b3b','#2f6fe0','#22a05a','#e0b020','#8e44c8','#ee7d1f'];
 const ld=()=>{try{return JSON.parse(localStorage.getItem('mg_best')||'{}')}catch(e){return{}}};
 const best=()=>Object.assign({},mem0,ld());
 const stop=()=>{T.forEach(t=>{clearTimeout(t);clearInterval(t)});T=[]};
@@ -89,11 +86,10 @@ const GM={
   choose(el,a+' '+op+' '+b,near(r),r,done)}}};
 const name=k=>D()[k==='odd'?'odd2':k];
 function menu(){stop();queue=[];const b=best(),d=D(),ks=Object.keys(GM),bfi=Math.round(ks.reduce((a,k)=>a+(b[k]||0),0)/ks.length);
- show(`<div class="top"><h1>Mind Gym</h1><button class="ghost" id="lg">${lang==='de'?'EN':'DE'}</button></div><p class="sub">${d.sub}</p>
+ show(`<div class="top"><h1>Mind Gym</h1></div><p class="sub">${d.sub}</p>
  <div class="total"><div><small>${d.bfi}</small><b>${bfi}</b></div><div class="cats">${ks.map(k=>`<div class="cr"><span>${d.cats[GM[k].c]}</span><i><u style="width:${Math.min(100,(b[k]||0)/3)}%"></u></i></div>`).join('')}</div></div>
  <button class="pri" id="wk" style="margin:0 0 12px">${d.work}</button>`+
  ks.map(k=>`<button class="g" data-k="${k}"><span class="i">${GM[k].i}</span><span><b>${name(k)}</b><small>${d[k==='odd'?'oddd':k+'d']}</small></span><span class="b">${d.best}<strong>${b[k]||0}</strong></span></button>`).join(''));
- $('#lg').onclick=()=>{lang=lang==='de'?'en':'de';menu()};
  $('#wk').onclick=()=>{queue=Object.keys(GM);run(queue.shift())};
  document.querySelectorAll('.g').forEach(e=>e.onclick=()=>run(e.dataset.k));}
 function run(k){stop();const g=GM[k],d=D(),b=best();let lvl=Math.min(1+Math.floor((b[k]||0)/(g.n*20)),5),streak=0,r=0,score=0,maxl=lvl;

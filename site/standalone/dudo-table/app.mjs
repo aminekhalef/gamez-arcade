@@ -6,6 +6,7 @@ import { dudoOnline } from './online.mjs';
 
 const $ = id => document.getElementById(id);
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const diceShake = new Audio(new URL('./dice-shake.mp3', import.meta.url));
 const dots = {
   2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8],
   5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
@@ -53,7 +54,14 @@ function addLog(type, title, detail) {
   if (history.length > 8) history.pop();
 }
 
-function start() {
+function playDiceShake(onBlocked) {
+  diceShake.currentTime = 0;
+  diceShake.play().catch(error => {
+    if (error.name === 'NotAllowedError') onBlocked?.();
+  });
+}
+
+function start(onShakeBlocked) {
   clearTimeout(timer);
   game = startGame();
   history = [];
@@ -61,6 +69,7 @@ function start() {
   revealed = 0;
   revealOrder = [];
   addLog('roll', 'Dice rolled', '20 dice in play');
+  playDiceShake(onShakeBlocked);
   prepareTurn();
 }
 
@@ -146,6 +155,7 @@ function advance() {
   revealed = 0;
   revealOrder = [];
   addLog('roll', game.palifico ? 'Palifico round' : 'Dice rolled', `${diceInPlay(game)} dice in play`);
+  playDiceShake();
   prepareTurn();
 }
 
@@ -322,7 +332,11 @@ document.querySelectorAll('[data-close]').forEach(button => {
   button.addEventListener('click', () => $(button.dataset.close).close());
 });
 $('quick-die').innerHTML = dice(PACO);
-start();
+start(() => {
+  document.addEventListener('click', () => {
+    if (!onlinePlaying && game.round === 1 && !game.bid && !game.result) playDiceShake();
+  }, { capture: true, once: true });
+});
 
 const roomDialog = $('online-room');
 const roomEntry = $('room-entry');
@@ -396,6 +410,8 @@ function displayRoom(room, playerId, changed) {
   // Rotate seats on each screen so the viewer always occupies the bottom seat.
   const self = room.players.findIndex(player => player.id === playerId);
   const remote = room.dudo.game;
+  const roundStarted = !remote.result && remote.winner === undefined &&
+    (firstOnlineTurn || remote.round !== game.round || game.winner !== undefined);
   const localSeat = seat => (seat - self + remote.players.length) % remote.players.length;
   const players = remote.players.map(player => ({
     ...player,
@@ -416,6 +432,7 @@ function displayRoom(room, playerId, changed) {
   revealOrder = game.result ? players.filter(player => player.roll.length).map(player => player.id) : [];
   revealed = revealOrder.length;
   revealDice = diceInPlay(game);
+  if (roundStarted) playDiceShake();
   prepareTurn();
 }
 

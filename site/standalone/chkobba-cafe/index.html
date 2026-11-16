@@ -22,6 +22,63 @@
 .deal-layer .dealing-back{position:absolute;box-shadow:0 5px 12px #08241e9c}
 .card-sprite{position:absolute;overflow:hidden;pointer-events:none}
 .center{position:relative}
+.hookah-scene{
+  position:absolute;
+  inset:0;
+  z-index:5;
+  overflow:hidden;
+  border-radius:inherit;
+  pointer-events:none;
+}
+.hookah-smoke{
+  position:absolute;
+  inset:0;
+  animation:hookah-fade var(--hookah-duration) linear both;
+}
+.hookah-wisp{
+  position:absolute;
+  left:var(--left);
+  top:var(--top);
+  width:var(--width,80%);
+  height:auto;
+  opacity:var(--density);
+  transform:rotate(var(--tilt,0deg)) scaleX(var(--mirror,1));
+}
+.hookah-wisp:nth-child(1){--left:-14%;--top:27%;--from:-30%;--to:54%;--tilt:-10deg;--density:.62}
+.hookah-wisp:nth-child(2){--left:37%;--top:20%;--from:34%;--to:-50%;--tilt:14deg;--density:.57;--mirror:-1}
+.hookah-wisp:nth-child(3){--left:12%;--top:-10%;--width:93%;--from:12%;--to:-24%;--tilt:13deg;--density:.36}
+.hookah-sprite{
+  position:absolute;
+  bottom:12%;
+  width:clamp(46px,13%,108px);
+  height:auto;
+  filter:drop-shadow(0 5px 6px #0b1919bb);
+  transform:scaleX(var(--mirror,1));
+  animation:hookah-fade var(--hookah-duration) linear both;
+}
+.hookah-sprite.left{left:2%;--entry:-125%}
+.hookah-sprite.right{right:2%;--entry:125%;--mirror:-1}
+@media(prefers-reduced-motion:no-preference){
+  .hookah-wisp{animation:hookah-smoke-drift var(--hookah-duration) ease-out both}
+  .hookah-sprite{
+    animation:
+      hookah-slide 560ms cubic-bezier(.18,.72,.28,1) both,
+      hookah-fade var(--hookah-duration) linear both;
+  }
+}
+@keyframes hookah-smoke-drift{
+  0%{translate:var(--from) 18%;scale:.76;opacity:0}
+  10%{opacity:var(--density)}
+  100%{translate:var(--to) -38%;scale:1.3;opacity:var(--density)}
+}
+@keyframes hookah-slide{
+  from{translate:var(--entry) 0}
+  to{translate:0 0}
+}
+@keyframes hookah-fade{
+  from{opacity:1}
+  to{opacity:0}
+}
 .header-actions{display:flex;gap:6px}
 .celebration{position:absolute;z-index:3;top:0;left:50%;width:max-content;max-width:calc(100% - 14px);transform:translateX(-50%);pointer-events:none}
 .celebration-badge{--accent:#ffda86;--light:#fff1c9;--deep:#56351b;position:relative;z-index:1;display:grid;justify-items:center;gap:5px;padding:10px 16px;border:2px solid var(--accent);border-radius:11px;color:var(--light);background:linear-gradient(155deg,var(--deep),#211d22);box-shadow:0 0 26px color-mix(in srgb,var(--accent) 55%,transparent),0 6px 18px #091e18aa;text-align:center;animation:celebration-in 400ms cubic-bezier(.2,.8,.25,1) both}
@@ -1730,10 +1787,19 @@ body {
 <header><div class="top"><div class="brand"><span class="brand-icon" aria-hidden="true">♦</span>Chkobba Café</div><div class="header-actions"><button class="outline" id="sound" type="button" aria-label="Game sound and voice" aria-pressed="true">Sound on</button><button class="outline" id="rules-open" type="button">How to play</button></div></div></header>
 <main>
 <div class="title-row"><div><h1>Chkobba <span lang="ar" style="font-size:.55em;letter-spacing:0">شكبّة</span></h1><p class="subtitle">The Tunisian card game · You vs. computer</p></div>
-<div class="settings"><select id="target" aria-label="Match length"><option value="11">Quick · 11 points</option><option value="21">Classic · 21 points</option></select><button id="reset" class="outline" type="button">New game</button><button id="shake" class="outline" type="button" aria-label="Celebration shake and vibration" aria-pressed="false">Shake off</button></div></div>
+<div class="settings"><select id="target" aria-label="Match length"><option value="11">Quick · 11 points</option><option value="21">Classic · 21 points</option></select><button id="reset" class="outline" type="button" disabled>New game</button><button id="shake" class="outline" type="button" aria-label="Celebration shake and vibration" aria-pressed="false">Shake off</button></div></div>
 <div class="layout">
 <section class="board" id="board" aria-label="Card table">
 <div class="deal-layer" id="deal-layer" aria-hidden="true"></div>
+<div id="hookah-scene" class="hookah-scene" aria-hidden="true" hidden>
+<div class="hookah-smoke">
+<img class="hookah-wisp" src="shisha-smoke.webp" alt="" draggable="false">
+<img class="hookah-wisp" src="shisha-smoke.webp" alt="" draggable="false">
+<img class="hookah-wisp" src="shisha-smoke.webp" alt="" draggable="false">
+</div>
+<img class="hookah-sprite left" src="shisha-cutout.webp" alt="" draggable="false">
+<img class="hookah-sprite right" src="shisha-cutout.webp" alt="" draggable="false">
+</div>
 <div class="board-top"><span class="round-tag" id="round"></span><span id="deck"></span></div>
 <div class="zone bot">
 <div class="bot-hand"><div class="label zone-label">Computer <span class="capture-pile" id="bot-pile" title="Cards captured by the computer">0</span></div><div class="cards" id="bot"></div></div>
@@ -1741,7 +1807,7 @@ body {
 </div>
 <div class="zone center"><div class="label">Table</div><div class="cards" id="table"></div><div class="celebration" id="celebration" role="status" aria-atomic="true"></div></div>
 <div class="zone hand"><div class="label zone-label">Your hand <span class="capture-pile" id="your-pile" title="Cards you captured">0</span></div><div class="cards" id="hand"></div></div>
-<div class="board-bottom"><p id="status" role="status"></p><button class="solid" id="play" type="button" disabled>Play card</button></div>
+<div class="board-bottom"><p id="status" role="status">Choose a match length and deal the cards.</p><button class="solid" id="play" type="button">Deal cards</button></div>
 </section>
 <aside aria-label="Match statistics">
 <section class="panel"><h2>Match score</h2><div class="scores"><div class="score player">You<strong id="your-score">0</strong></div><div class="score">Computer<strong id="bot-score">0</strong></div></div><div class="scoreline"><span id="goal"></span><span id="sweeps"></span></div></section>
@@ -1751,6 +1817,6 @@ body {
 </div></main>
 <dialog id="rules"><h2>How to play Chkobba</h2><p>Play one card per turn. Take one matching card or any group whose values add up to your card. If a capture is available for the card you play, you must take it. Otherwise, leave the card on the table.</p><p>Ace = 1. Cards 2 to 7 are worth their face value.</p><p class="court-values"><span><strong>Q · 8</strong> Mujira <bdi lang="aeb-Arab">مجيرة</bdi></span><span><strong>J · 9</strong> Kawwal <bdi lang="aeb-Arab">كوّال</bdi></span><span><strong>K · 10</strong> Rayy <bdi lang="aeb-Arab">ريّ</bdi></span></p><ul><li><strong>Karta</strong> · most captured cards</li><li><strong>Dineri</strong> · most diamonds</li><li><strong>Bermila</strong> · most sevens, with sixes breaking the tie</li><li><strong>7ayya</strong> · the seven of diamonds</li><li><strong>Chkobba</strong> · one point for clearing the table before the last play</li></ul><p>Tied categories award zero points. At the end of a round, leftover cards go to the last player who captured. If the match scores are tied at or above the target, play another round.</p><form method="dialog"><button class="solid">Back to table</button></form></dialog>
 <dialog id="restart"><h2>Start a new match?</h2><p id="restart-copy"></p><form method="dialog"><button class="outline" value="cancel">Keep playing</button><button class="solid" value="confirm">Start match</button></form></dialog>
-<script src="game.js?v=16"></script>
+<script src="game.js?v=22"></script>
 </body>
 </html>

@@ -103,6 +103,7 @@ function playMove(match, player, cardId, targetIds) {
     round.table.push(card);
   }
 
+  const dealt = !final && round.hands.every(cards => cards.length === 0);
   if (final) {
     if (round.lastCapture !== null) round.piles[round.lastCapture].push(...round.table);
     round.table = [];
@@ -111,11 +112,11 @@ function playMove(match, player, cardId, targetIds) {
     const [you, bot] = match.scores;
     if (Math.max(you, bot) >= match.target && you !== bot) round.winner = you > bot ? 0 : 1;
   } else {
-    if (round.hands.every(cards => cards.length === 0)) deal(round);
+    if (dealt) deal(round);
     round.turn = 1 - player;
   }
 
-  return { card, chosen, sweep };
+  return { card, chosen, sweep, dealt };
 }
 
 function computerMove(round) {
@@ -145,16 +146,22 @@ if (typeof document !== "undefined") {
   const sound = get("sound");
   const shake = get("shake");
   const dealLayer = get("deal-layer");
+  const hookahScene = get("hookah-scene");
   const board = get("board");
   const rankNames = { A: "Ace", Q: "Queen", J: "Jack", K: "King" };
   let match, selected, selectedIds, log, botTimer, botMove, motion, requestedTarget;
   let celebrationTimer;
   let tableShake, callout;
+  let hookahTimer, hookahSource;
   let roundIntro = null;
-  let previousSpecial, audio, captureSound;
+  let previousSpecial, audio;
   let soundOn = true;
   let shakePreference;
   const activeSounds = new Set();
+  const cardRecording = loadRecording("./card-sounds.mp3");
+  const shuffleRecording = loadRecording("./card-mixing.mp3");
+  const hookahRecording = loadRecording("./hookah-bubbling.mp3?v=2");
+  const cheerRecording = loadRecording("./crowd-cheer.mp3");
   try { soundOn = localStorage.getItem("chkobba-sound") !== "off"; } catch {}
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   try { shakePreference = localStorage.getItem("chkobba-shake"); } catch {}
@@ -183,16 +190,16 @@ if (typeof document !== "undefined") {
     motion?.animations.forEach(animation => animation.cancel());
     match = { target: goal, scores: [0, 0], round: 0, current: null };
     target.value = String(goal);
+    get("reset").disabled = false;
     nextRound();
   }
 
   function nextRound() {
     tableShake?.cancel();
     stopCallout();
+    stopHookah();
     roundIntro?.animations.forEach(animation => animation.cancel());
     dealLayer.replaceChildren();
-    roundIntro = !reduceMotion.matches && typeof dealLayer.animate === "function"
-      ? { label: "Shuffling cards…", animations: [] } : null;
     startRound(match);
     resetSelection();
     clearTimeout(celebrationTimer);
@@ -201,7 +208,16 @@ if (typeof document !== "undefined") {
     log = [];
     botMove = null;
     motion = null;
+    showDeal(true);
+    scheduleHookah();
+  }
+
+  function showDeal(opening) {
+    roundIntro = !reduceMotion.matches && typeof dealLayer.animate === "function"
+      ? { opening, label: opening ? "Shuffling cards…" : "Dealing new hands…", animations: [] } : null;
     render();
+    // The original recording is longer than the opening shuffle and deal.
+    if (opening) playRecording(shuffleRecording, .18, 3.12);
     if (roundIntro) animateDeal(roundIntro);
     else scheduleBot();
   }
@@ -215,7 +231,7 @@ if (typeof document !== "undefined") {
   }
 
   async function animateDeal(intro) {
-    const table = [...get("table").children];
+    const table = intro.opening ? [...get("table").children] : [];
     const hand = [...get("hand").children];
     const bot = [...get("bot").children];
     const destinations = [...table, ...hand.flatMap((card, index) => [card, bot[index]])];
@@ -240,7 +256,8 @@ if (typeof document !== "undefined") {
     }
 
     const stack = "translate(-50%, -50%)";
-    await Promise.all(Array.from({ length: 8 }, (_, index) => {
+    const shuffleCount = intro.opening ? 8 : 0;
+    await Promise.all(Array.from({ length: shuffleCount }, (_, index) => {
       const side = index % 2 ? 1 : -1;
       const offset = Math.floor(index / 2);
       return animateBack([
@@ -252,7 +269,7 @@ if (typeof document !== "undefined") {
     }));
     if (roundIntro !== intro) return;
 
-    intro.label = "Dealing cards…";
+    intro.label = intro.opening ? "Dealing cards…" : "Dealing new hands…";
     get("status").textContent = intro.label;
     // Leave a small draw stack on the felt while the opening cards travel.
     while (dealLayer.children.length > 3) dealLayer.lastElementChild.remove();
@@ -264,7 +281,7 @@ if (typeof document !== "undefined") {
         { transform: stack, opacity: 0 },
         { transform: stack + ` translate(${x * .16}px, ${y * .16 - 10}px) rotate(-9deg)`, opacity: 1, offset: .2 },
         { transform: stack + ` translate(${x}px, ${y}px)`, opacity: 1 }
-      ], { duration: 450, delay: index * 150, easing: "cubic-bezier(.2,.65,.35,1)" }, card);
+      ], { duration: 450, delay: index * (intro.opening ? 150 : 80), easing: "cubic-bezier(.2,.65,.35,1)" }, card);
     }));
     if (roundIntro !== intro) return;
     dealLayer.replaceChildren();
@@ -479,62 +496,81 @@ if (typeof document !== "undefined") {
     tone.stop(end);
   }
 
-  function playCaptureSound() {
-    if (!soundOn || audio?.state !== "running") return;
-    if (!captureSound) {
-      const rate = audio.sampleRate;
-      captureSound = audio.createBuffer(1, Math.ceil(.18 * rate), rate);
-      const samples = captureSound.getChannelData(0);
-      // Short card edges, a softer slide across the felt, and a final tap on the pile.
-      const strokes = [
-        { start: 0, length: .025, volume: .52 },
-        { start: .029, length: .026, volume: .33 },
-        { start: .056, length: .085, volume: .27 },
-        { start: .144, length: .031, volume: .46 }
-      ];
-      for (const stroke of strokes) {
-        const offset = Math.round(stroke.start * rate);
-        const length = Math.round(stroke.length * rate);
-        for (let index = 0; index < length; index++) {
-          const attack = Math.min(1, index / (rate * .001));
-          const decay = (1 - index / length) ** 3;
-          samples[offset + index] = (Math.random() * 2 - 1) * attack * decay * stroke.volume;
-        }
-      }
-    }
+  function loadRecording(path) {
+    return {
+      data: fetch(path)
+        .then(response => response.ok ? response.arrayBuffer() : null)
+        .catch(() => null)
+    };
+  }
 
+  async function playRecording(recording, offset, end, { level = .7, fade = .012 } = {}) {
+    if (!soundOn || !audio) return;
+    const round = match.current;
+    recording.buffer ??= recording.data
+      .then(data => data && audio.decodeAudioData(data))
+      .catch(() => null);
+    const buffer = await recording.buffer;
+    if (!buffer || !soundOn || round !== match.current) return;
+    if (audio.state !== "running") await audio.resume().catch(() => {});
+    if (audio.state !== "running" || !soundOn || round !== match.current) return;
+
+    const duration = Math.min(buffer.duration, end) - offset;
+    if (duration < .02) return;
     const source = audio.createBufferSource();
-    source.buffer = captureSound;
-    const highpass = audio.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 620;
-    const lowpass = audio.createBiquadFilter();
-    lowpass.type = "lowpass";
-    lowpass.frequency.value = 4600;
-    source.connect(highpass).connect(lowpass).connect(audio.destination);
+    const volume = audio.createGain();
+    const start = audio.currentTime;
+    source.buffer = buffer;
+    volume.gain.setValueAtTime(0, start);
+    volume.gain.linearRampToValueAtTime(level, start + .006);
+    volume.gain.setValueAtTime(level, start + duration - fade);
+    volume.gain.linearRampToValueAtTime(0, start + duration);
+    source.connect(volume).connect(audio.destination);
     activeSounds.add(source);
     source.onended = () => {
       activeSounds.delete(source);
       source.disconnect();
-      highpass.disconnect();
-      lowpass.disconnect();
+      volume.disconnect();
     };
-    source.start();
+    source.start(start, offset, duration);
+    return source;
   }
 
-  function playCelebrationSound(hayya, sweep, savage) {
-    const notes = savage ? [392, 523.25, 659.25, 783.99, 1046.5]
-      : hayya && sweep ? [523.25, 659.25, 783.99, 1046.5]
-      : sweep ? [392, 523.25, 659.25, 783.99] : [659.25, 987.77, 1318.51];
-    notes.forEach((frequency, index) => {
-      playTone(frequency, index * .075, index === notes.length - 1 ? .28 : .16,
-        sweep || savage ? "triangle" : "sine", .11);
-    });
-    if (sweep) {
-      playTone(125, 0, .19, "triangle", .16, 56);
-      playTone(380, .13, .065, "triangle", .07, 160);
-      playTone(125, .25, .18, "triangle", .13, 56);
+  function stopHookah() {
+    clearTimeout(hookahTimer);
+    hookahTimer = null;
+    if (hookahSource) {
+      activeSounds.delete(hookahSource);
+      hookahSource.stop();
+      hookahSource = null;
     }
+    hookahScene.hidden = true;
+  }
+
+  function scheduleHookah() {
+    if (!soundOn || !match?.current || match.current.result) return;
+    const clipDuration = 15;
+    const timer = setTimeout(async () => {
+      if (!document.hidden && !roundIntro && !celebration.childElementCount) {
+        const source = await playRecording(hookahRecording, 0, clipDuration, { level: .6, fade: .35 });
+        if (hookahTimer !== timer) {
+          source?.stop();
+          return;
+        }
+        if (source) {
+          hookahSource = source;
+          hookahScene.style.setProperty("--hookah-duration", Math.min(source.buffer.duration, clipDuration) + "s");
+          hookahScene.hidden = false;
+          source.addEventListener("ended", () => {
+            if (hookahSource !== source) return;
+            hookahSource = null;
+            hookahScene.hidden = true;
+          }, { once: true });
+        }
+      }
+      scheduleHookah();
+    }, 18000 + Math.random() * 22000);
+    hookahTimer = timer;
   }
 
   function stopCallout() {
@@ -580,13 +616,15 @@ if (typeof document !== "undefined") {
     celebrationTimer = setTimeout(() => celebration.replaceChildren(), duration);
   }
 
-  function celebrateMatch(winner) {
+  function celebrateMatch(winner, special) {
     const won = winner === 0;
     const text = won ? "مبروك عليك! ربحت الماتش!" : "هالمرّة الكمبيوتر ربح. نعاودو؟";
     showCelebration(text, won ? "You won the match!" : "The computer won the match.",
       won ? "match-win" : "match-loss", 4200);
-    const notes = won ? [392, 523.25, 659.25, 783.99] : [330, 261.63];
-    notes.forEach((note, index) => playTone(note, index * .12, .25, "triangle", .09));
+    if (!special) {
+      const notes = won ? [392, 523.25, 659.25, 783.99] : [330, 261.63];
+      notes.forEach((note, index) => playTone(note, index * .12, .25, "triangle", .09));
+    }
     speakTunisian(text, winner);
   }
 
@@ -655,7 +693,6 @@ if (typeof document !== "undefined") {
       drop.append(smoke, microphone);
       celebration.append(drop);
     }
-    playCelebrationSound(hayya, sweep, savage);
     speakTunisian(savage ? "يا سلام! " + text : text, player);
   }
 
@@ -676,12 +713,17 @@ if (typeof document !== "undefined") {
     const highlights = [hayya && "7ayya", move.sweep && "Chkobba!"].filter(Boolean);
     log = [[who + action + card.id, ...highlights].join(" · "), ...log].slice(0, 3);
     const round = match.current;
-    if (round.result) match.lastResult = { ...round.result, number: match.round };
+    if (round.result) {
+      stopHookah();
+      match.lastResult = { ...round.result, number: match.round };
+    }
     resetSelection();
-    render();
-    if (round.winner !== null) celebrateMatch(round.winner);
+    if (move.dealt) showDeal(false);
+    else render();
+    if (special) playRecording(cheerRecording, .08, 2.7, { level: .32, fade: .3 });
+    if (round.winner !== null) celebrateMatch(round.winner, special);
     else if (special) celebrate(player, hayya, move.sweep, savage);
-    scheduleBot(special && shakeEnabled() ? 610 : 350);
+    if (!move.dealt) scheduleBot(special && shakeEnabled() ? 610 : 350);
   }
 
   function slide(element, frames, duration, easing = "cubic-bezier(.22,.68,.26,1)") {
@@ -744,14 +786,15 @@ if (typeof document !== "undefined") {
     if (motion !== move) return;
 
     if (!taken.length) {
-      playTone(185, 0, .065, "triangle", .065, 76);
+      // A laid card uses the final tap. Captures include the shuffle leading up to it.
+      playRecording(cardRecording, .258, .42);
     } else {
       move.arrived = true;
       render();
       const pause = animate ? (player === 1 ? 240 : 470) : 380;
       await new Promise(resolve => setTimeout(resolve, pause));
       if (motion !== move) return;
-      playCaptureSound();
+      playRecording(cardRecording, .042, .42);
       if (animate) {
         const pile = get(player === 0 ? "your-pile" : "bot-pile").getBoundingClientRect();
         if (player === 1) {
@@ -796,6 +839,7 @@ if (typeof document !== "undefined") {
   }
 
   target.addEventListener("change", () => {
+    if (!match) return;
     const goal = Number(target.value);
     target.value = String(match.target);
     requestRestart(goal);
@@ -818,8 +862,11 @@ if (typeof document !== "undefined") {
   sound.addEventListener("click", () => {
     soundOn = !soundOn;
     try { localStorage.setItem("chkobba-sound", soundOn ? "on" : "off"); } catch {}
-    if (soundOn) unlockSound();
-    else {
+    if (soundOn) {
+      unlockSound();
+      scheduleHookah();
+    } else {
+      stopHookah();
       activeSounds.forEach(source => source.stop());
       stopCallout();
     }
@@ -827,6 +874,10 @@ if (typeof document !== "undefined") {
   });
   play.addEventListener("click", () => {
     unlockSound();
+    if (!match) {
+      newMatch(Number(target.value));
+      return;
+    }
     const round = match.current;
     if (round.result) {
       if (round.winner === null) nextRound();
@@ -840,5 +891,4 @@ if (typeof document !== "undefined") {
   updateSoundButton();
   updateShakeButton();
   window.speechSynthesis?.getVoices();
-  newMatch(11);
 }

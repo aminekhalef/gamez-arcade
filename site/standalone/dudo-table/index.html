@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171512">
+  <meta name="description" content="A Perudo-inspired dice bluffing game. Take on three CPU opponents and try to be the last player with dice.">
+  <meta name="robots" content="noindex,follow">
+  <title>Dudo Table · Liar’s Dice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="../../config.js"></script>
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="./" class="brand" aria-label="Dudo Table home"><span class="brand-icon" aria-hidden="true"><i></i><i></i></span>Dudo <em>Table</em></a>
+      <nav aria-label="Game controls">
+        <button id="online-btn" class="outline">Play online</button>
+        <button id="rules-btn" class="subtle"><span aria-hidden="true">?</span> How to play</button>
+        <button id="new-btn" class="outline"><span aria-hidden="true">↻</span> New game</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="masthead">
+      <div>
+        <p class="mode"><i></i> <span id="game-mode">Solo · 3 CPU opponents</span></p>
+        <h1>Liar’s Dice</h1>
+      </div>
+      <div class="round-label" id="round-label">Round 1</div>
+    </div>
+    <p id="online-status" class="online-status" role="status" hidden></p>
+
+    <div class="layout">
+      <section class="play" aria-label="Game table">
+        <div class="table" id="table">
+          <div class="table-edge" aria-hidden="true"></div>
+          <div class="table-status" id="table-status"></div>
+          <div class="seats" id="seats"></div>
+          <div class="center" id="center" aria-live="polite"></div>
+          <div class="your-seat" id="your-seat"></div>
+        </div>
+        <section class="controls" id="controls" aria-label="Your actions"></section>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel activity">
+          <div class="panel-heading"><h2>Table log</h2><span id="round-small"></span></div>
+          <ol id="log" aria-label="Recent table actions"></ol>
+        </section>
+        <section class="panel quick">
+          <div class="panel-heading"><h2>Table rules</h2></div>
+          <div class="quick-item"><span class="quick-icon" id="quick-die"></span><div><b>Pacos are wild</b><p>The toucan counts toward any bid in a normal round. Bid on faces 2–6.</p></div></div>
+          <div class="quick-item"><span class="quick-icon doubt" aria-hidden="true">!</span><div><b>Call Dudo to challenge</b><p>Everyone reveals. Whoever is wrong loses a die.</p></div></div>
+          <div class="quick-item"><span class="quick-icon diamond" aria-hidden="true">◇</span><div><b>Palifico</b><p>Only dice showing the bid number count.</p></div></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <dialog id="rules">
+    <div class="dialog-title"><h2>How to play</h2><button type="button" data-close="rules" aria-label="Close rules">×</button></div>
+    <p>Be the last player with dice. Each round, everyone rolls in secret. A bid like <b>four 5s</b> claims there are at least four dice matching 5 across all cups.</p>
+    <h3>Raise the bid</h3>
+    <p>Bid on a face from 2 to 6 in every round. Increase the quantity and choose any number, or keep the quantity and choose a higher number. During a normal round, the Paco joker counts toward the bid.</p>
+    <h3>Call Dudo</h3>
+    <p>Challenge the last bid. If enough dice match, the challenger loses one die. Otherwise, the bidder loses one. The player who loses a die opens the next round, or the next surviving seat opens if they’re eliminated.</p>
+    <h3>Play a Palifico round</h3>
+    <p>The first time a player drops to one die, they open a Palifico round. Only dice showing the bid number count. The face is fixed, except a player who completed an earlier Palifico can raise to a different face. Palifico is disabled heads-up.</p>
+    <button class="primary" data-close="rules">Back to table</button>
+  </dialog>
+  <dialog id="restart">
+    <div class="dialog-title"><h2>Start a new game?</h2><button type="button" data-close="restart" aria-label="Cancel">×</button></div>
+    <p>This will end your current match and give everyone five dice.</p>
+    <div class="dialog-actions"><button class="outline" data-close="restart">Cancel</button><button class="primary" id="confirm-new">Start new game</button></div>
+  </dialog>
+  <dialog id="online-room">
+    <div class="dialog-title"><h2>Online room</h2><button type="button" data-close="online-room" aria-label="Close online room">×</button></div>
+    <form id="room-entry" class="room-entry-form">
+      <p>Invite friends using a room code. Computer opponents fill the empty seats when the host starts.</p>
+      <label>Display name <input id="room-name" name="name" required maxlength="18" autocomplete="nickname"></label>
+      <button class="primary" type="submit" value="create">Create room</button>
+      <label>Room code <input id="room-code" name="code" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <button class="outline" type="submit" value="join">Join room</button>
+    </form>
+    <section id="room-info" hidden>
+      <p>Room code <button type="button" class="outline" id="copy-code" aria-label="Copy room code"></button></p>
+      <ul id="room-players" class="room-players" aria-label="Table seats"></ul>
+      <p id="room-note"></p>
+      <div class="dialog-actions">
+        <button type="button" class="outline" id="leave-room">Leave room</button>
+        <button type="button" class="primary" id="start-room">Start match</button>
+      </div>
+    </section>
+    <p id="room-error" class="online-status" role="status" hidden></p>
+  </dialog>
+</body>
+</html>

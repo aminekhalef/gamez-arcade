@@ -151,10 +151,10 @@ if (typeof document !== "undefined") {
   let celebrationTimer;
   let tableShake, callout;
   let roundIntro = null;
-  let previousSpecial, audio;
+  let previousSpecial, audio, captureSound;
   let soundOn = true;
   let shakePreference;
-  const activeTones = new Set();
+  const activeSounds = new Set();
   try { soundOn = localStorage.getItem("chkobba-sound") !== "off"; } catch {}
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   try { shakePreference = localStorage.getItem("chkobba-shake"); } catch {}
@@ -473,10 +473,53 @@ if (typeof document !== "undefined") {
     volume.gain.exponentialRampToValueAtTime(.001, end);
     tone.connect(volume);
     volume.connect(audio.destination);
-    activeTones.add(tone);
-    tone.onended = () => activeTones.delete(tone);
+    activeSounds.add(tone);
+    tone.onended = () => activeSounds.delete(tone);
     tone.start(start);
     tone.stop(end);
+  }
+
+  function playCaptureSound() {
+    if (!soundOn || audio?.state !== "running") return;
+    if (!captureSound) {
+      const rate = audio.sampleRate;
+      captureSound = audio.createBuffer(1, Math.ceil(.18 * rate), rate);
+      const samples = captureSound.getChannelData(0);
+      // Short card edges, a softer slide across the felt, and a final tap on the pile.
+      const strokes = [
+        { start: 0, length: .025, volume: .52 },
+        { start: .029, length: .026, volume: .33 },
+        { start: .056, length: .085, volume: .27 },
+        { start: .144, length: .031, volume: .46 }
+      ];
+      for (const stroke of strokes) {
+        const offset = Math.round(stroke.start * rate);
+        const length = Math.round(stroke.length * rate);
+        for (let index = 0; index < length; index++) {
+          const attack = Math.min(1, index / (rate * .001));
+          const decay = (1 - index / length) ** 3;
+          samples[offset + index] = (Math.random() * 2 - 1) * attack * decay * stroke.volume;
+        }
+      }
+    }
+
+    const source = audio.createBufferSource();
+    source.buffer = captureSound;
+    const highpass = audio.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 620;
+    const lowpass = audio.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 4600;
+    source.connect(highpass).connect(lowpass).connect(audio.destination);
+    activeSounds.add(source);
+    source.onended = () => {
+      activeSounds.delete(source);
+      source.disconnect();
+      highpass.disconnect();
+      lowpass.disconnect();
+    };
+    source.start();
   }
 
   function playCelebrationSound(hayya, sweep, savage) {
@@ -700,13 +743,15 @@ if (typeof document !== "undefined") {
     }
     if (motion !== move) return;
 
-    playTone(185, 0, .065, "triangle", .065, 76);
-    if (taken.length) {
+    if (!taken.length) {
+      playTone(185, 0, .065, "triangle", .065, 76);
+    } else {
       move.arrived = true;
       render();
       const pause = animate ? (player === 1 ? 240 : 470) : 380;
       await new Promise(resolve => setTimeout(resolve, pause));
       if (motion !== move) return;
+      playCaptureSound();
       if (animate) {
         const pile = get(player === 0 ? "your-pile" : "bot-pile").getBoundingClientRect();
         if (player === 1) {
@@ -726,7 +771,6 @@ if (typeof document !== "undefined") {
       }
     }
     if (motion !== move) return;
-    if (taken.length) playTone(420, 0, .11, "triangle", .055, 170);
     move.animations.forEach(animation => animation.cancel());
     finishTurn(player, card, taken);
   }
@@ -776,7 +820,7 @@ if (typeof document !== "undefined") {
     try { localStorage.setItem("chkobba-sound", soundOn ? "on" : "off"); } catch {}
     if (soundOn) unlockSound();
     else {
-      activeTones.forEach(tone => tone.stop());
+      activeSounds.forEach(source => source.stop());
       stopCallout();
     }
     updateSoundButton();

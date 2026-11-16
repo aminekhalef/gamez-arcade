@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A five-letter word puzzle. Play the daily challenge or practice with unlimited rounds.">
+<meta name="robots" content="noindex,follow">
+<meta name="theme-color" content="#f8f5ee">
+<title>Lettergrid — The five-letter puzzle</title>
+<link rel="stylesheet" href="style.css">
+<script src="words.js" defer></script>
+<script src="game.js" defer></script>
+</head>
+<body>
+<header class="masthead">
+  <a class="brand" href="./"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Lettergrid<span class="brand-dot">.</span></a>
+  <div class="header-actions"><button id="stats" class="outline">Stats</button><button id="help" class="outline icon" aria-label="How to play">?</button></div>
+</header>
+<main class="layout">
+  <aside class="intro" aria-labelledby="title">
+    <p class="edition"><span></span> THE FIVE-LETTER PUZZLE</p>
+    <h1 id="title">Make every<br> letter <em>count.</em></h1>
+    <p class="description">Find the hidden word in six guesses. Each guess reveals which letters belong and where they fit.</p>
+    <div class="guide">
+      <p><span class="sample green" aria-hidden="true">A</span> Right letter, right spot</p>
+      <p><span class="sample yellow" aria-hidden="true">R</span> Right letter, wrong spot</p>
+      <p><span class="sample gray" aria-hidden="true">T</span> No matching copy left</p>
+    </div>
+  </aside>
+  <section class="game" aria-label="Word puzzle">
+    <div class="toolbar">
+      <div class="modes" role="group" aria-label="Game mode">
+        <button id="daily" aria-pressed="true">Daily</button>
+        <button id="unlimited" aria-pressed="false">Unlimited</button>
+      </div>
+      <span id="puzzle-label" class="puzzle-label"></span>
+    </div>
+    <div id="board" class="board" role="group" aria-label="Guess grid"></div>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <div id="keyboard" class="keyboard" role="group" aria-label="On-screen keyboard"></div>
+    <div id="round-actions" class="round-actions" hidden>
+      <button id="share" class="outline">Share result</button>
+      <button id="next" class="solid">Play again</button>
+    </div>
+  </section>
+</main>
+<footer class="footer"><span>LETTERGRID</span><span>Daily puzzles reset at midnight UTC.</span><a href="dictionary-license.txt">Dictionary credits</a></footer>
+<dialog id="dialog" aria-labelledby="dialog-title">
+  <button id="close" class="outline icon close" aria-label="Close dialog">×</button>
+  <h2 id="dialog-title"></h2>
+  <div id="dialog-body"></div>
+</dialog>
+</body>
+</html>

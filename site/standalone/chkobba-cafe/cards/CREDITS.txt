@@ -1,0 +1,13 @@
+French-suited playing cards with Paris-pattern courts
+
+Adapted from SVG-cards 4.0.2 by David Bellot and Huub de Beer.
+Copyright (C) 2005 David Bellot
+Copyright (C) 2016, 2017 Huub de Beer
+
+The card drawings were extracted into individual SVG files with only
+their required definitions. These editable drawings are distributed
+under the GNU Lesser General Public License, version 2.1 or later.
+See LICENSE.txt for the license text.
+
+Upstream source: https://github.com/htdebeer/SVG-cards
+Original project: https://svg-cards.sourceforge.net/

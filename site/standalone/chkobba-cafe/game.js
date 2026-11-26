@@ -235,8 +235,11 @@ if (typeof document !== "undefined") {
   async function animateDeal(intro) {
     const table = intro.opening ? [...get("table").children] : [];
     const hand = [...get("hand").children];
-    const bot = [...get("bot").children];
-    const destinations = [...table, ...hand.flatMap((card, index) => [card, bot[index]])].filter(Boolean);
+    const otherHands = online
+      ? [...get("online-opponents").querySelectorAll(".opponent-cards")].map(group => [...group.children])
+      : [[...get("bot").children]];
+    const dealOrder = Array.from({ length: 3 }, (_, index) => [hand[index], ...otherHands.map(cards => cards[index])]).flat();
+    const destinations = [...table, ...dealOrder].filter(Boolean);
     destinations.forEach(card => { card.style.visibility = "hidden"; });
 
     const layer = dealLayer.getBoundingClientRect();
@@ -336,7 +339,7 @@ if (typeof document !== "undefined") {
   }
 
   function renderOnlineStatus() {
-    const { room, myTurn, isHost, busy, error, opponent } = onlineTable;
+    const { room, myTurn, isHost, busy, error } = onlineTable;
     if (room.phase === "finished") {
       play.textContent = "Match complete";
       play.disabled = true;
@@ -349,7 +352,40 @@ if (typeof document !== "undefined") {
     }
     if (error) return error;
     if (busy) return "Sending your move…";
-    return myTurn ? undefined : "Waiting for " + opponent.name + "…";
+    return myTurn ? undefined : "Waiting for " + room.players[room.turn].name + "…";
+  }
+
+  function renderOnlineSeats() {
+    const { room, playerId } = onlineTable;
+    const active = room.roundOver ? undefined : room.players[room.turn]?.id;
+    const opponents = room.players.filter(player => player.id !== playerId);
+    get("online-opponents").replaceChildren(...opponents.map(player => {
+      const seat = document.createElement("div");
+      seat.className = "cafe-opponent";
+      seat.classList.toggle("active-seat", player.id === active);
+      const name = document.createElement("span");
+      name.className = "label";
+      name.textContent = player.name;
+      const hand = document.createElement("div");
+      hand.className = "opponent-cards cards";
+      const count = player.chkobbaHand?.length ?? 0;
+      hand.setAttribute("aria-label", count + " hidden cards in " + player.name + "'s hand");
+      hand.replaceChildren(...Array.from({ length: count }, cardBack));
+      seat.append(name, hand);
+      return seat;
+    }));
+    get("match-scores").replaceChildren(...room.players.map(player => {
+      const tile = document.createElement("div");
+      tile.className = "score";
+      tile.classList.toggle("player", player.id === playerId);
+      const name = player.id === playerId ? "You" : player.name;
+      const value = document.createElement("strong");
+      value.textContent = player.score ?? 0;
+      const detail = document.createElement("span");
+      detail.textContent = (player.captured?.length ?? 0) + " captured · " + (player.sweeps ?? 0) + " sweeps";
+      tile.append(name, value, detail);
+      return tile;
+    }));
   }
 
   function render() {
@@ -359,18 +395,22 @@ if (typeof document !== "undefined") {
     const complete = options.some(option => sameCards(option, selectedIds));
     get("round").textContent = "Round " + match.round;
     get("deck").textContent = round.deck.length + " cards in deck";
-    get("your-score").textContent = match.scores[0];
-    get("bot-score").textContent = match.scores[1];
+    if (onlineTable) {
+      renderOnlineSeats();
+    } else {
+      get("your-score").textContent = match.scores[0];
+      get("bot-score").textContent = match.scores[1];
+    }
     get("goal").textContent = "Target · " + match.target;
-    get("sweeps").textContent = "Sweeps · " + round.sweeps.join("–");
-    for (const [player, id] of ["your-pile", "bot-pile"].entries()) {
+    get("sweeps").textContent = onlineTable ? "" : "Sweeps · " + round.sweeps.join("–");
+    for (const [player, id] of (onlineTable ? ["your-pile"] : ["your-pile", "bot-pile"]).entries()) {
       const count = round.piles[player].length;
       get(id).textContent = count;
       get(id).setAttribute("aria-label", count + " captured cards");
     }
     const hiddenCount = round.hands[1].length - Number(motion?.player === 1);
     get("bot").replaceChildren(...Array.from({ length: hiddenCount }, cardBack));
-    get("bot").setAttribute("aria-label", hiddenCount + " hidden cards in " + (onlineTable?.opponent.name ?? "computer") + " hand");
+    get("bot").setAttribute("aria-label", hiddenCount + " hidden cards in computer hand");
     const played = get("bot-played");
     if (botMove) {
       const face = document.createElement("div");
@@ -873,12 +913,12 @@ if (typeof document !== "undefined") {
     if (event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "chkobba:table") return;
     const { room, playerId, version, busy, error } = event.data;
     const me = room.players.find(player => player.id === playerId);
-    const opponent = room.players.find(player => player.id !== playerId);
-    if (!me || !opponent) return;
+    if (!me) return;
+    const opponents = room.players.filter(player => player.id !== playerId);
     const previous = onlineTable;
     const changed = previous?.version !== version;
     const myTurn = room.players[room.turn]?.id === playerId;
-    onlineTable = { room, opponent, myTurn, isHost: room.hostId === playerId, version, busy, error };
+    onlineTable = { room, playerId, myTurn, isHost: room.hostId === playerId, version, busy, error };
     if (!changed) {
       if (previous.busy !== busy || previous.error !== error) render();
       return;
@@ -889,33 +929,29 @@ if (typeof document !== "undefined") {
       ? { rows: room.roundSummary.map(line => [line]), number: room.round }
       : match?.lastResult;
     match = {
-      target: 11, round: room.round, scores: [me.score ?? 0, opponent.score ?? 0], lastResult,
+      target: 11, round: room.round, lastResult,
+      scores: [me.score ?? 0, Math.max(...opponents.map(player => player.score ?? 0))],
       current: {
-        hands: [(me.chkobbaHand ?? []).map(face), opponent.chkobbaHand ?? []],
+        hands: [(me.chkobbaHand ?? []).map(face), opponents.flatMap(player => player.chkobbaHand ?? [])],
         table: (room.table ?? []).map(face), deck: room.pile ?? [],
-        piles: [me.captured ?? [], opponent.captured ?? []], sweeps: [me.sweeps ?? 0, opponent.sweeps ?? 0],
+        piles: [me.captured ?? []],
         result: roundFinished, winner: room.phase === "finished" ? (room.winner === playerId ? 0 : 1) : null,
         turn: myTurn ? 0 : 1,
       },
     };
-    get("bot-name").textContent = opponent.name;
-    get("opponent-score-name").textContent = opponent.name;
-    get("opponent-column").textContent = opponent.name;
-    get("bot-pile").title = "Cards captured by " + opponent.name;
-    get("bot-played").parentElement.hidden = true;
     resetSelection();
     log = (room.history ?? []).slice(0, 3).map(move => move.text);
     if (previous && room.history?.[0]?.id !== previous.room.history?.[0]?.id) {
       playRecording(cardRecording, .042, .42);
     }
     const openedRound = previous ? previous.room.round !== room.round : !room.history?.length;
-    if (!roundFinished && (openedRound || (previous && (room.pile?.length ?? 0) < (previous.room.pile?.length ?? 0)))) {
-      showDeal(openedRound);
-    } else if (roundIntro) {
+    if (roundIntro) {
       roundIntro.animations.forEach(animation => animation.cancel());
       roundIntro = null;
       dealLayer.replaceChildren();
-      render();
+    }
+    if (!roundFinished && (openedRound || (previous && (room.pile?.length ?? 0) < (previous.room.pile?.length ?? 0)))) {
+      showDeal(openedRound);
     } else {
       render();
     }
@@ -926,6 +962,9 @@ if (typeof document !== "undefined") {
   if (online) {
     target.hidden = true;
     get("reset").hidden = true;
+    get("solo-opponent").hidden = true;
+    get("online-opponents").hidden = false;
+    get("breakdown").tHead.hidden = true;
     play.disabled = true;
     get("status").textContent = "Loading the private table…";
     get("capture-rule").textContent = "Play one card per turn. Take all matching cards if there are any, or take a group whose values add up to your card. If no capture is available, leave your card on the table.";

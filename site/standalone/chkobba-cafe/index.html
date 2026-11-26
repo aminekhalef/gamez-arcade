@@ -13,6 +13,13 @@
 .bot{display:flex;justify-content:center;align-items:start;gap:clamp(14px,5vw,40px);min-height:104px}
 .bot-hand{min-width:127px}
 .bot-move{min-width:106px}
+.online-opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,88px),1fr));gap:6px;margin-top:8px;text-align:center}
+.cafe-opponent{min-width:0;min-height:78px;padding:6px;border-radius:8px;border:1px solid #dbe6bc59}
+.cafe-opponent.active-seat{border-color:#f2cd85;background:#103e34}
+.cafe-opponent .label{display:block;overflow-wrap:anywhere;margin-bottom:5px;letter-spacing:0;font-size:.8rem}
+.opponent-cards.cards{gap:3px}
+.opponent-cards .card.back{width:clamp(17px,3.6vw,29px);height:clamp(25px,5.3vw,42px);border-width:1px;font-size:.8rem}
+.score > span{display:block}
 .card-slot{width:57px;height:78px;display:grid;place-items:center;border:1px dashed #d8ead366;border-radius:7px;color:#e3eddc;font-size:14px}
 .zone-label{display:flex;justify-content:center;align-items:center;gap:7px}
 .capture-pile{display:inline-grid;place-items:center;min-width:23px;height:18px;padding:0 4px;border:1px solid #e3c789;border-radius:4px;background:#143b31;color:#f8dfad;font-size:10px;letter-spacing:0;font-variant-numeric:tabular-nums}
@@ -1801,22 +1808,23 @@ body {
 <img class="hookah-sprite right" src="shisha-cutout.webp" alt="" draggable="false">
 </div>
 <div class="board-top"><span class="round-tag" id="round"></span><span id="deck"></span></div>
-<div class="zone bot">
-<div class="bot-hand"><div class="label zone-label"><span id="bot-name">Computer</span> <span class="capture-pile" id="bot-pile" title="Cards captured by the computer">0</span></div><div class="cards" id="bot"></div></div>
+<div class="zone bot" id="solo-opponent">
+<div class="bot-hand"><div class="label zone-label">Computer <span class="capture-pile" id="bot-pile" title="Cards captured by the computer">0</span></div><div class="cards" id="bot"></div></div>
 <div class="bot-move"><div class="label" id="bot-play-label">Last card played</div><div class="cards" id="bot-played"></div></div>
 </div>
+<div id="online-opponents" class="online-opponents" aria-label="Other players" hidden></div>
 <div class="zone center"><div class="label">Table</div><div class="cards" id="table"></div><div class="celebration" id="celebration" role="status" aria-atomic="true"></div></div>
 <div class="zone hand"><div class="label zone-label">Your hand <span class="capture-pile" id="your-pile" title="Cards you captured">0</span></div><div class="cards" id="hand"></div></div>
 <div class="board-bottom"><p id="status" role="status">Choose a match length and deal the cards.</p><button class="solid" id="play" type="button">Deal cards</button></div>
 </section>
 <aside aria-label="Match statistics">
-<section class="panel"><h2>Match score</h2><div class="scores"><div class="score player">You<strong id="your-score">0</strong></div><div class="score"><span id="opponent-score-name">Computer</span><strong id="bot-score">0</strong></div></div><div class="scoreline"><span id="goal"></span><span id="sweeps"></span></div></section>
+<section class="panel"><h2>Match score</h2><div class="scores" id="match-scores"><div class="score player">You<strong id="your-score">0</strong></div><div class="score">Computer<strong id="bot-score">0</strong></div></div><div class="scoreline"><span id="goal"></span><span id="sweeps"></span></div></section>
 <section class="panel"><h2 id="round-heading">Round scorecard</h2><p class="small" id="score-empty">The scorecard appears after all 40 cards have been played.</p><table class="breakdown" id="breakdown" hidden><thead><tr><th scope="col">Points</th><th scope="col">You</th><th scope="col" id="opponent-column">CPU</th></tr></thead><tbody id="details"></tbody></table></section>
 <section class="panel activity"><h2>Last moves</h2><div id="log"></div></section>
 </aside>
 </div></main>
 <dialog id="rules"><h2>How to play Chkobba</h2><p id="capture-rule">Play one card per turn. Take one matching card or any group whose values add up to your card. If a capture is available for the card you play, you must take it. Otherwise, leave the card on the table.</p><p>Ace = 1. Cards 2 to 7 are worth their face value.</p><p class="court-values"><span><strong>Q · 8</strong> Mujira <bdi lang="aeb-Arab">مجيرة</bdi></span><span><strong>J · 9</strong> Kawwal <bdi lang="aeb-Arab">كوّال</bdi></span><span><strong>K · 10</strong> Rayy <bdi lang="aeb-Arab">ريّ</bdi></span></p><ul><li><strong>Karta</strong> · most captured cards</li><li><strong>Dineri</strong> · most diamonds</li><li><strong>Bermila</strong> · most sevens, with sixes breaking the tie</li><li><strong>7ayya</strong> · the seven of diamonds</li><li><strong>Chkobba</strong> · one point for clearing the table before the last play</li></ul><p id="match-rule">Tied categories award zero points. At the end of a round, leftover cards go to the last player who captured. If the match scores are tied at or above the target, play another round.</p><form method="dialog"><button class="solid">Back to table</button></form></dialog>
 <dialog id="restart"><h2>Start a new match?</h2><p id="restart-copy"></p><form method="dialog"><button class="outline" value="cancel">Keep playing</button><button class="solid" value="confirm">Start match</button></form></dialog>
-<script src="game.js?v=23"></script>
+<script src="game.js?v=24"></script>
 </body>
 </html>

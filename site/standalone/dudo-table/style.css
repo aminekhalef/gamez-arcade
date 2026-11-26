@@ -317,3 +317,4 @@ dialog h3 { margin-bottom: -7px; font-size: 15px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; }
 }
+.invite-actions button, .room-entry-form button { min-height: 48px; }

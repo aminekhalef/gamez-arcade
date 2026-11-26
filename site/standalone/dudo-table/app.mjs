@@ -2,7 +2,7 @@ import {
   BID_FACES, PACO, startGame, diceInPlay, minimumBid, legalBids, placeBid,
   matches, countMatches, challenge, finishRound, chooseCpuMove
 } from './engine.mjs';
-import { dudoOnline } from './online.mjs';
+import { dudoOnline } from './online.mjs?v=2';
 
 const $ = id => document.getElementById(id);
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -369,6 +369,7 @@ function displayRoom(room, playerId, changed) {
   $('new-btn').hidden = !!room?.dudo;
   if (room) {
     $('copy-code').textContent = room.code;
+    $('invite-actions').hidden = !lobby;
     $('start-room').hidden = !lobby || !onlineHost;
     $('leave-room').hidden = !lobby && !finished;
     const roster = Array.from({ length: 4 }, (_, seat) => {
@@ -465,7 +466,7 @@ $('online-btn').addEventListener('click', () => {
 });
 roomEntry.addEventListener('submit', event => {
   event.preventDefault();
-  const intent = event.submitter?.value ?? 'create';
+  const intent = event.submitter?.value ?? (inviteCode ? 'join' : 'create');
   const name = $('room-name').value.trim();
   const code = $('room-code').value.trim().toUpperCase();
   if (!name) return showMessage($('room-error'), 'Enter your display name.');
@@ -485,4 +486,38 @@ $('copy-code').addEventListener('click', () => {
     showMessage($('room-error'), 'Room code copied.');
   }, $('room-error'));
 });
-online.resume();
+function inviteUrl() {
+  const url = new URL('../../games/liars-dice/', location.href);
+  url.searchParams.set('room', online.room.code);
+  return url.href;
+}
+
+async function copyInvite() {
+  try {
+    await navigator.clipboard.writeText(inviteUrl());
+    showMessage($('room-error'), 'Invite link copied.');
+  } catch {
+    showMessage($('room-error'), 'Could not copy the link. Share room code ' + online.room.code + ' instead.');
+  }
+}
+
+$('copy-invite').addEventListener('click', copyInvite);
+$('share-invite').hidden = typeof navigator.share !== 'function';
+$('share-invite').addEventListener('click', async () => {
+  try {
+    await navigator.share({ url: inviteUrl() });
+  } catch (error) {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) await copyInvite();
+  }
+});
+
+const requestedRoom = new URLSearchParams(location.search).get('room')?.trim().toUpperCase() ?? '';
+const inviteCode = /^[A-Z2-9]{6}$/.test(requestedRoom) ? requestedRoom : '';
+if (inviteCode) {
+  $('room-code').value = inviteCode;
+  roomEntry.querySelector('[value="create"]').remove();
+  roomDialog.showModal();
+  online.resume(inviteCode);
+} else {
+  online.resume();
+}

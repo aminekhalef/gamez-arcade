@@ -20,6 +20,10 @@
 .opponent-cards.cards{gap:3px}
 .opponent-cards .card.back{width:clamp(17px,3.6vw,29px);height:clamp(25px,5.3vw,42px);border-width:1px;font-size:.8rem}
 .score > span{display:block}
+@media (pointer:coarse) {
+  .board button.card:not(.back){min-width:48px}
+  .board-bottom .solid{min-height:48px}
+}
 .card-slot{width:57px;height:78px;display:grid;place-items:center;border:1px dashed #d8ead366;border-radius:7px;color:#e3eddc;font-size:14px}
 .zone-label{display:flex;justify-content:center;align-items:center;gap:7px}
 .capture-pile{display:inline-grid;place-items:center;min-width:23px;height:18px;padding:0 4px;border:1px solid #e3c789;border-radius:4px;background:#143b31;color:#f8dfad;font-size:10px;letter-spacing:0;font-variant-numeric:tabular-nums}

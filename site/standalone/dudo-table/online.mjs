@@ -73,10 +73,10 @@ export function dudoOnline({ onChange, onConnection }) {
   }
 
   return {
-    resume() {
+    resume(inviteCode) {
       try {
         const saved = JSON.parse(sessionStorage.getItem(sessionKey));
-        if (saved?.code && saved?.playerId && saved?.token) {
+        if (saved?.code && saved?.playerId && saved?.token && (!inviteCode || saved.code === inviteCode)) {
           session = saved;
           onConnection('Reconnecting to your room…');
           void poll(saved);

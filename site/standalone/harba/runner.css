@@ -60,7 +60,7 @@ h1{font-size:clamp(28px,4.5vw,54px);letter-spacing:-2px;line-height:1.05;margin:
 #feedback{color:#f1d48a}
 #boost-status{color:#afc6ce;margin-left:auto;text-align:right}
 .controls{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:10px;padding:14px 22px 10px}
-.controls button{display:grid;gap:4px;padding:12px 8px;touch-action:none;user-select:none}
+.controls button{display:grid;gap:4px;min-height:48px;padding:12px 8px;touch-action:none;user-select:none}
 .controls strong{font-size:14px}
 .controls small{font-size:10px;color:#b2c5ce}
 .controls .action-control:not(:disabled){background:#a75238;border-color:#c87f5e}

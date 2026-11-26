@@ -148,6 +148,8 @@ if (typeof document !== "undefined") {
   const dealLayer = get("deal-layer");
   const hookahScene = get("hookah-scene");
   const board = get("board");
+  const online = new URLSearchParams(location.search).get("mode") === "online" && window.parent !== window;
+  let onlineTable;
   const rankNames = { A: "Ace", Q: "Queen", J: "Jack", K: "King" };
   let match, selected, selectedIds, log, botTimer, botMove, motion, requestedTarget;
   let celebrationTimer;
@@ -234,7 +236,7 @@ if (typeof document !== "undefined") {
     const table = intro.opening ? [...get("table").children] : [];
     const hand = [...get("hand").children];
     const bot = [...get("bot").children];
-    const destinations = [...table, ...hand.flatMap((card, index) => [card, bot[index]])];
+    const destinations = [...table, ...hand.flatMap((card, index) => [card, bot[index]])].filter(Boolean);
     destinations.forEach(card => { card.style.visibility = "hidden"; });
 
     const layer = dealLayer.getBoundingClientRect();
@@ -328,10 +330,32 @@ if (typeof document !== "undefined") {
     return [...get(area).children].find(element => element.dataset.card === cardId);
   }
 
+  function captureChoices(card, table) {
+    const equals = online ? table.filter(item => item.value === card.value) : [];
+    return equals.length ? [equals] : captures(card, table);
+  }
+
+  function renderOnlineStatus() {
+    const { room, myTurn, isHost, busy, error, opponent } = onlineTable;
+    if (room.phase === "finished") {
+      play.textContent = "Match complete";
+      play.disabled = true;
+      return room.message;
+    }
+    if (room.roundOver) {
+      play.textContent = "Next round";
+      play.disabled = !isHost || busy;
+      return error || (isHost ? "Round complete. Review the scorecard or deal the next round." : "Waiting for the host to deal the next round…");
+    }
+    if (error) return error;
+    if (busy) return "Sending your move…";
+    return myTurn ? undefined : "Waiting for " + opponent.name + "…";
+  }
+
   function render() {
     const round = match.current;
-    const ready = !roundIntro && !motion && !round.result && round.turn === 0;
-    const options = selected ? captures(selected, round.table) : [];
+    const ready = !roundIntro && !motion && !round.result && round.turn === 0 && !onlineTable?.busy;
+    const options = selected ? captureChoices(selected, round.table) : [];
     const complete = options.some(option => sameCards(option, selectedIds));
     get("round").textContent = "Round " + match.round;
     get("deck").textContent = round.deck.length + " cards in deck";
@@ -346,7 +370,7 @@ if (typeof document !== "undefined") {
     }
     const hiddenCount = round.hands[1].length - Number(motion?.player === 1);
     get("bot").replaceChildren(...Array.from({ length: hiddenCount }, cardBack));
-    get("bot").setAttribute("aria-label", hiddenCount + " hidden cards in computer hand");
+    get("bot").setAttribute("aria-label", hiddenCount + " hidden cards in " + (onlineTable?.opponent.name ?? "computer") + " hand");
     const played = get("bot-played");
     if (botMove) {
       const face = document.createElement("div");
@@ -366,7 +390,7 @@ if (typeof document !== "undefined") {
           selected = selected === card ? null : card;
           selectedIds = [];
           if (selected) {
-            const choices = captures(card, round.table);
+            const choices = captureChoices(card, round.table);
             if (choices.length === 1) selectedIds = choices[0].map(item => item.id);
           }
           updateSelection(card.id, "hand");
@@ -440,14 +464,20 @@ if (typeof document !== "undefined") {
       status = "Choose a matching card or cards totaling " + selected.value + ".";
       play.textContent = "Capture";
     }
-    get("status").textContent = status;
+    get("status").textContent = (onlineTable && renderOnlineStatus()) ?? status;
     get("score-empty").hidden = Boolean(match.lastResult);
     get("breakdown").hidden = !match.lastResult;
     if (match.lastResult) {
       const { rows, points, number } = match.lastResult;
       get("round-heading").textContent = "Round " + number + " scorecard";
-      get("details").replaceChildren(...[...rows, ["Total", ...points]].map(values => {
+      get("details").replaceChildren(...(points ? [...rows, ["Total", ...points]] : rows).map(values => {
         const row = document.createElement("tr");
+        if (!points) {
+          const cell = row.insertCell();
+          cell.colSpan = 3;
+          cell.textContent = values[0];
+          return row;
+        }
         for (const value of values) row.insertCell().textContent = value;
         return row;
       }));
@@ -819,6 +849,7 @@ if (typeof document !== "undefined") {
   }
 
   function scheduleBot(delay = 350) {
+    if (online) return;
     if (match.current.turn !== 1 || match.current.result) return;
     botTimer = setTimeout(() => {
       const { card, taken } = computerMove(match.current);
@@ -836,6 +867,70 @@ if (typeof document !== "undefined") {
     restart.returnValue = "";
     get("restart-copy").textContent = "Start a fresh " + goal + "-point match? Your current score will reset.";
     restart.showModal();
+  }
+
+  function receiveTable(event) {
+    if (event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "chkobba:table") return;
+    const { room, playerId, version, busy, error } = event.data;
+    const me = room.players.find(player => player.id === playerId);
+    const opponent = room.players.find(player => player.id !== playerId);
+    if (!me || !opponent) return;
+    const previous = onlineTable;
+    const changed = previous?.version !== version;
+    const myTurn = room.players[room.turn]?.id === playerId;
+    onlineTable = { room, opponent, myTurn, isHost: room.hostId === playerId, version, busy, error };
+    if (!changed) {
+      if (previous.busy !== busy || previous.error !== error) render();
+      return;
+    }
+    const face = ({ rank, suit }) => deckCards.find(card => card.value === rank && card.suit === suit);
+    const roundFinished = room.roundOver || room.phase === "finished";
+    const lastResult = room.roundOver && room.roundSummary?.length
+      ? { rows: room.roundSummary.map(line => [line]), number: room.round }
+      : match?.lastResult;
+    match = {
+      target: 11, round: room.round, scores: [me.score ?? 0, opponent.score ?? 0], lastResult,
+      current: {
+        hands: [(me.chkobbaHand ?? []).map(face), opponent.chkobbaHand ?? []],
+        table: (room.table ?? []).map(face), deck: room.pile ?? [],
+        piles: [me.captured ?? [], opponent.captured ?? []], sweeps: [me.sweeps ?? 0, opponent.sweeps ?? 0],
+        result: roundFinished, winner: room.phase === "finished" ? (room.winner === playerId ? 0 : 1) : null,
+        turn: myTurn ? 0 : 1,
+      },
+    };
+    get("bot-name").textContent = opponent.name;
+    get("opponent-score-name").textContent = opponent.name;
+    get("opponent-column").textContent = opponent.name;
+    get("bot-pile").title = "Cards captured by " + opponent.name;
+    get("bot-played").parentElement.hidden = true;
+    resetSelection();
+    log = (room.history ?? []).slice(0, 3).map(move => move.text);
+    if (previous && room.history?.[0]?.id !== previous.room.history?.[0]?.id) {
+      playRecording(cardRecording, .042, .42);
+    }
+    const openedRound = previous ? previous.room.round !== room.round : !room.history?.length;
+    if (!roundFinished && (openedRound || (previous && (room.pile?.length ?? 0) < (previous.room.pile?.length ?? 0)))) {
+      showDeal(openedRound);
+    } else if (roundIntro) {
+      roundIntro.animations.forEach(animation => animation.cancel());
+      roundIntro = null;
+      dealLayer.replaceChildren();
+      render();
+    } else {
+      render();
+    }
+    if (roundFinished) stopHookah();
+    else if (!previous || previous.room.round !== room.round) scheduleHookah();
+  }
+
+  if (online) {
+    target.hidden = true;
+    get("reset").hidden = true;
+    play.disabled = true;
+    get("status").textContent = "Loading the private table…";
+    get("capture-rule").textContent = "Play one card per turn. Take all matching cards if there are any, or take a group whose values add up to your card. If no capture is available, leave your card on the table.";
+    get("match-rule").textContent = "Tied categories award zero points. Leftover cards go to the last player who captured. Win by reaching at least 11 points with a lead of at least two.";
+    window.addEventListener("message", receiveTable);
   }
 
   target.addEventListener("change", () => {
@@ -874,6 +969,18 @@ if (typeof document !== "undefined") {
   });
   play.addEventListener("click", () => {
     unlockSound();
+    if (online) {
+      if (!onlineTable || play.disabled) return;
+      const { room, version } = onlineTable;
+      const action = room.roundOver ? "next_round" : "chkobba_play";
+      const payload = room.roundOver ? undefined : {
+        handIndex: match.current.hands[0].indexOf(selected),
+        tableIndexes: selectedIds.map(id => match.current.table.findIndex(card => card.id === id)),
+      };
+      play.disabled = true;
+      window.parent.postMessage({ type: "chkobba:action", version, action, payload }, location.origin);
+      return;
+    }
     if (!match) {
       newMatch(Number(target.value));
       return;

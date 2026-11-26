@@ -1802,7 +1802,7 @@ body {
 </div>
 <div class="board-top"><span class="round-tag" id="round"></span><span id="deck"></span></div>
 <div class="zone bot">
-<div class="bot-hand"><div class="label zone-label">Computer <span class="capture-pile" id="bot-pile" title="Cards captured by the computer">0</span></div><div class="cards" id="bot"></div></div>
+<div class="bot-hand"><div class="label zone-label"><span id="bot-name">Computer</span> <span class="capture-pile" id="bot-pile" title="Cards captured by the computer">0</span></div><div class="cards" id="bot"></div></div>
 <div class="bot-move"><div class="label" id="bot-play-label">Last card played</div><div class="cards" id="bot-played"></div></div>
 </div>
 <div class="zone center"><div class="label">Table</div><div class="cards" id="table"></div><div class="celebration" id="celebration" role="status" aria-atomic="true"></div></div>
@@ -1810,13 +1810,13 @@ body {
 <div class="board-bottom"><p id="status" role="status">Choose a match length and deal the cards.</p><button class="solid" id="play" type="button">Deal cards</button></div>
 </section>
 <aside aria-label="Match statistics">
-<section class="panel"><h2>Match score</h2><div class="scores"><div class="score player">You<strong id="your-score">0</strong></div><div class="score">Computer<strong id="bot-score">0</strong></div></div><div class="scoreline"><span id="goal"></span><span id="sweeps"></span></div></section>
-<section class="panel"><h2 id="round-heading">Round scorecard</h2><p class="small" id="score-empty">The scorecard appears after all 40 cards have been played.</p><table class="breakdown" id="breakdown" hidden><thead><tr><th scope="col">Points</th><th scope="col">You</th><th scope="col">CPU</th></tr></thead><tbody id="details"></tbody></table></section>
+<section class="panel"><h2>Match score</h2><div class="scores"><div class="score player">You<strong id="your-score">0</strong></div><div class="score"><span id="opponent-score-name">Computer</span><strong id="bot-score">0</strong></div></div><div class="scoreline"><span id="goal"></span><span id="sweeps"></span></div></section>
+<section class="panel"><h2 id="round-heading">Round scorecard</h2><p class="small" id="score-empty">The scorecard appears after all 40 cards have been played.</p><table class="breakdown" id="breakdown" hidden><thead><tr><th scope="col">Points</th><th scope="col">You</th><th scope="col" id="opponent-column">CPU</th></tr></thead><tbody id="details"></tbody></table></section>
 <section class="panel activity"><h2>Last moves</h2><div id="log"></div></section>
 </aside>
 </div></main>
-<dialog id="rules"><h2>How to play Chkobba</h2><p>Play one card per turn. Take one matching card or any group whose values add up to your card. If a capture is available for the card you play, you must take it. Otherwise, leave the card on the table.</p><p>Ace = 1. Cards 2 to 7 are worth their face value.</p><p class="court-values"><span><strong>Q · 8</strong> Mujira <bdi lang="aeb-Arab">مجيرة</bdi></span><span><strong>J · 9</strong> Kawwal <bdi lang="aeb-Arab">كوّال</bdi></span><span><strong>K · 10</strong> Rayy <bdi lang="aeb-Arab">ريّ</bdi></span></p><ul><li><strong>Karta</strong> · most captured cards</li><li><strong>Dineri</strong> · most diamonds</li><li><strong>Bermila</strong> · most sevens, with sixes breaking the tie</li><li><strong>7ayya</strong> · the seven of diamonds</li><li><strong>Chkobba</strong> · one point for clearing the table before the last play</li></ul><p>Tied categories award zero points. At the end of a round, leftover cards go to the last player who captured. If the match scores are tied at or above the target, play another round.</p><form method="dialog"><button class="solid">Back to table</button></form></dialog>
+<dialog id="rules"><h2>How to play Chkobba</h2><p id="capture-rule">Play one card per turn. Take one matching card or any group whose values add up to your card. If a capture is available for the card you play, you must take it. Otherwise, leave the card on the table.</p><p>Ace = 1. Cards 2 to 7 are worth their face value.</p><p class="court-values"><span><strong>Q · 8</strong> Mujira <bdi lang="aeb-Arab">مجيرة</bdi></span><span><strong>J · 9</strong> Kawwal <bdi lang="aeb-Arab">كوّال</bdi></span><span><strong>K · 10</strong> Rayy <bdi lang="aeb-Arab">ريّ</bdi></span></p><ul><li><strong>Karta</strong> · most captured cards</li><li><strong>Dineri</strong> · most diamonds</li><li><strong>Bermila</strong> · most sevens, with sixes breaking the tie</li><li><strong>7ayya</strong> · the seven of diamonds</li><li><strong>Chkobba</strong> · one point for clearing the table before the last play</li></ul><p id="match-rule">Tied categories award zero points. At the end of a round, leftover cards go to the last player who captured. If the match scores are tied at or above the target, play another round.</p><form method="dialog"><button class="solid">Back to table</button></form></dialog>
 <dialog id="restart"><h2>Start a new match?</h2><p id="restart-copy"></p><form method="dialog"><button class="outline" value="cancel">Keep playing</button><button class="solid" value="confirm">Start match</button></form></dialog>
-<script src="game.js?v=22"></script>
+<script src="game.js?v=23"></script>
 </body>
 </html>

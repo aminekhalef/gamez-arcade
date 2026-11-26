@@ -34,7 +34,9 @@ function deal(round) {
   round.hands = [round.deck.splice(0, 3), round.deck.splice(0, 3)];
 }
 
-function captures(card, table) {
+function captures(card, table, takeAllMatches = false) {
+  const matches = table.filter(item => item.value === card.value);
+  if (matches.length) return takeAllMatches ? [matches] : matches.map(item => [item]);
   const options = [];
   function visit(start, remaining, picked) {
     if (!remaining) {
@@ -333,11 +335,6 @@ if (typeof document !== "undefined") {
     return [...get(area).children].find(element => element.dataset.card === cardId);
   }
 
-  function captureChoices(card, table) {
-    const equals = online ? table.filter(item => item.value === card.value) : [];
-    return equals.length ? [equals] : captures(card, table);
-  }
-
   function renderOnlineStatus() {
     const { room, myTurn, isHost, busy, error } = onlineTable;
     if (motion || roundIntro) return undefined;
@@ -400,7 +397,8 @@ if (typeof document !== "undefined") {
   function render() {
     const round = match.current;
     const ready = !roundIntro && !motion && !round.result && round.turn === 0 && !onlineTable?.busy && !replayingOnline;
-    const options = selected ? captureChoices(selected, round.table) : [];
+    const options = selected ? captures(selected, round.table, online) : [];
+    const directMatch = selected && round.table.some(card => card.value === selected.value);
     const complete = options.some(option => sameCards(option, selectedIds));
     get("round").textContent = "Round " + match.round;
     get("deck").textContent = round.deck.length + " cards in deck";
@@ -439,7 +437,7 @@ if (typeof document !== "undefined") {
           selected = selected === card ? null : card;
           selectedIds = [];
           if (selected) {
-            const choices = captureChoices(card, round.table);
+            const choices = captures(card, round.table, online);
             if (choices.length === 1) selectedIds = choices[0].map(item => item.id);
           }
           updateSelection(card.id, "hand");
@@ -510,7 +508,8 @@ if (typeof document !== "undefined") {
         : "Capture " + selectedIds.length + (selectedIds.length === 1 ? " card." : " cards.");
       play.textContent = "Capture";
     } else {
-      status = "Choose a matching card or cards totaling " + selected.value + ".";
+      status = directMatch ? "A direct match has priority. Choose a card of the same value." :
+        "Choose cards totaling " + selected.value + ".";
       play.textContent = "Capture";
     }
     get("status").textContent = (onlineTable && renderOnlineStatus()) ?? status;

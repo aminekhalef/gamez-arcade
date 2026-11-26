@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.gamez-hub.com/</loc><changefreq>weekly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/liars-dice/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/vache-taureau/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/chkobba/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/howmuch/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/maptap/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/citysnap/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/riddle-game/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/lifesim/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/neon-blaster/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/harba/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/dune-crown/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/mind-gym/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/stadt-land-fluss/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/games/lettergrid/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/de/spiele/stadt-land-fluss/</loc><changefreq>monthly</changefreq></url>
-  <url><loc>https://www.gamez-hub.com/fr/jeux/chkobba/</loc><changefreq>monthly</changefreq></url>
+  <url><loc>https://www.gamez-hub.com/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/liars-dice/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/vache-taureau/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/chkobba/</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://www.gamez-hub.com/games/howmuch/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/maptap/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/citysnap/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/riddle-game/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/lifesim/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/neon-blaster/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/harba/</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://www.gamez-hub.com/games/dune-crown/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/mind-gym/</loc></url>
+  <url><loc>https://www.gamez-hub.com/games/stadt-land-fluss/</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://www.gamez-hub.com/games/lettergrid/</loc></url>
+  <url><loc>https://www.gamez-hub.com/de/spiele/stadt-land-fluss/</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://www.gamez-hub.com/fr/jeux/chkobba/</loc><lastmod>2026-11-26</lastmod></url>
 </urlset>

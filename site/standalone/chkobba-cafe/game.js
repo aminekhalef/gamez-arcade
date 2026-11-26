@@ -149,7 +149,7 @@ if (typeof document !== "undefined") {
   const hookahScene = get("hookah-scene");
   const board = get("board");
   const online = new URLSearchParams(location.search).get("mode") === "online" && window.parent !== window;
-  let onlineTable;
+  let onlineTable, latestOnlineTable, replayingOnline = false;
   const rankNames = { A: "Ace", Q: "Queen", J: "Jack", K: "King" };
   let match, selected, selectedIds, log, botTimer, botMove, motion, requestedTarget;
   let celebrationTimer;
@@ -220,7 +220,7 @@ if (typeof document !== "undefined") {
     render();
     // The original recording is longer than the opening shuffle and deal.
     if (opening) playRecording(shuffleRecording, .18, 3.12);
-    if (roundIntro) animateDeal(roundIntro);
+    if (roundIntro) roundIntro.finished = animateDeal(roundIntro);
     else scheduleBot();
   }
 
@@ -340,6 +340,7 @@ if (typeof document !== "undefined") {
 
   function renderOnlineStatus() {
     const { room, myTurn, isHost, busy, error } = onlineTable;
+    if (motion || roundIntro) return undefined;
     if (room.phase === "finished") {
       play.textContent = "Match complete";
       play.disabled = true;
@@ -347,31 +348,39 @@ if (typeof document !== "undefined") {
     }
     if (room.roundOver) {
       play.textContent = "Next round";
-      play.disabled = !isHost || busy;
+      play.disabled = !isHost || busy || replayingOnline;
       return error || (isHost ? "Round complete. Review the scorecard or deal the next round." : "Waiting for the host to deal the next round…");
     }
     if (error) return error;
     if (busy) return "Sending your move…";
+    if (replayingOnline) return "Updating the table…";
     return myTurn ? undefined : "Waiting for " + room.players[room.turn].name + "…";
   }
 
   function renderOnlineSeats() {
     const { room, playerId } = onlineTable;
-    const active = room.roundOver ? undefined : room.players[room.turn]?.id;
+    const active = motion?.actorId ?? (room.roundOver ? undefined : room.players[room.turn]?.id);
     const opponents = room.players.filter(player => player.id !== playerId);
     get("online-opponents").replaceChildren(...opponents.map(player => {
       const seat = document.createElement("div");
       seat.className = "cafe-opponent";
+      seat.dataset.player = player.id;
       seat.classList.toggle("active-seat", player.id === active);
+      const header = document.createElement("div");
+      header.className = "cafe-opponent-label";
       const name = document.createElement("span");
-      name.className = "label";
       name.textContent = player.name;
+      const pile = document.createElement("span");
+      pile.className = "capture-pile";
+      pile.textContent = player.captured?.length ?? 0;
+      pile.setAttribute("aria-label", pile.textContent + " captured cards");
+      header.append(name, pile);
       const hand = document.createElement("div");
       hand.className = "opponent-cards cards";
-      const count = player.chkobbaHand?.length ?? 0;
+      const count = player.id === motion?.actorId ? Math.max(0, motion.handCount - 1) : player.chkobbaHand?.length ?? 0;
       hand.setAttribute("aria-label", count + " hidden cards in " + player.name + "'s hand");
       hand.replaceChildren(...Array.from({ length: count }, cardBack));
-      seat.append(name, hand);
+      seat.append(header, hand);
       return seat;
     }));
     get("match-scores").replaceChildren(...room.players.map(player => {
@@ -390,7 +399,7 @@ if (typeof document !== "undefined") {
 
   function render() {
     const round = match.current;
-    const ready = !roundIntro && !motion && !round.result && round.turn === 0 && !onlineTable?.busy;
+    const ready = !roundIntro && !motion && !round.result && round.turn === 0 && !onlineTable?.busy && !replayingOnline;
     const options = selected ? captureChoices(selected, round.table) : [];
     const complete = options.some(option => sameCards(option, selectedIds));
     get("round").textContent = "Round " + match.round;
@@ -408,7 +417,7 @@ if (typeof document !== "undefined") {
       get(id).textContent = count;
       get(id).setAttribute("aria-label", count + " captured cards");
     }
-    const hiddenCount = round.hands[1].length - Number(motion?.player === 1);
+    const hiddenCount = online ? 0 : round.hands[1].length - Number(motion?.player === 1);
     get("bot").replaceChildren(...Array.from({ length: hiddenCount }, cardBack));
     get("bot").setAttribute("aria-label", hiddenCount + " hidden cards in computer hand");
     const played = get("bot-played");
@@ -484,8 +493,8 @@ if (typeof document !== "undefined") {
         status = "Round complete. See the scorecard for your points.";
       }
     } else if (motion) {
-      const { card, taken, player, arrived } = motion;
-      status = (player === 0 ? "You play " : "Computer plays ") + cardName(card);
+      const { card, taken, player, arrived, actorName } = motion;
+      status = (player === 0 ? "You play " : (actorName ?? "Computer") + " plays ") + cardName(card);
       status += arrived && taken.length
         ? (player === 0 ? " and take " : " and takes ") + taken.map(cardName).join(" + ") + "." : ".";
     } else if (!ready) {
@@ -832,11 +841,15 @@ if (typeof document !== "undefined") {
     }));
   }
 
-  async function moveCard(player, card, taken, source) {
+  function opponentSeat(playerId) {
+    return [...get("online-opponents").children].find(element => element.dataset.player === playerId);
+  }
+
+  async function moveCard(player, card, taken, source, replay) {
     if (motion) return;
     tableShake?.cancel();
     const start = source?.getBoundingClientRect();
-    const move = { player, card, taken, arrived: false, animations: [] };
+    const move = { player, card, taken, arrived: false, animations: [], ...replay };
     motion = move;
     resetSelection();
     render();
@@ -858,15 +871,18 @@ if (typeof document !== "undefined") {
     if (!taken.length) {
       // A laid card uses the final tap. Captures include the shuffle leading up to it.
       playRecording(cardRecording, .258, .42);
+      if (replay) await new Promise(resolve => setTimeout(resolve, 480));
     } else {
       move.arrived = true;
       render();
-      const pause = animate ? (player === 1 ? 240 : 470) : 380;
+      const pause = replay ? 450 : animate ? (player === 1 ? 240 : 470) : 380;
       await new Promise(resolve => setTimeout(resolve, pause));
       if (motion !== move) return;
       playRecording(cardRecording, .042, .42);
       if (animate) {
-        const pile = get(player === 0 ? "your-pile" : "bot-pile").getBoundingClientRect();
+        const destination = player === 0 ? get("your-pile")
+          : replay ? opponentSeat(replay.actorId)?.querySelector(".capture-pile") : get("bot-pile");
+        const pile = (destination ?? board).getBoundingClientRect();
         if (player === 1) {
           await gatherComputerCapture(card, taken, pile);
         } else {
@@ -885,7 +901,8 @@ if (typeof document !== "undefined") {
     }
     if (motion !== move) return;
     move.animations.forEach(animation => animation.cancel());
-    finishTurn(player, card, taken);
+    if (replay) motion = null;
+    else finishTurn(player, card, taken);
   }
 
   function scheduleBot(delay = 350) {
@@ -909,21 +926,50 @@ if (typeof document !== "undefined") {
     restart.showModal();
   }
 
-  function receiveTable(event) {
-    if (event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "chkobba:table") return;
-    const { room, playerId, version, busy, error } = event.data;
-    const me = room.players.find(player => player.id === playerId);
-    if (!me) return;
-    const opponents = room.players.filter(player => player.id !== playerId);
-    const previous = onlineTable;
-    const changed = previous?.version !== version;
-    const myTurn = room.players[room.turn]?.id === playerId;
-    onlineTable = { room, playerId, myTurn, isHost: room.hostId === playerId, version, busy, error };
-    if (!changed) {
-      if (previous.busy !== busy || previous.error !== error) render();
-      return;
+  function onlineCard({ rank, suit }) {
+    return deckCards.find(card => card.value === rank && card.suit === suit);
+  }
+
+  function describeOnlineMove(entry, room) {
+    if (!entry.chkobba) return entry.text;
+    const player = room.players.find(player => player.id === entry.playerId);
+    const { card, taken } = entry.chkobba;
+    const played = onlineCard(card).id;
+    const captured = taken.map(item => onlineCard(item).id).join(" + ");
+    return (player?.name ?? "Player") + " played " + played + (captured ? " · captured " + captured : "");
+  }
+
+  async function replayOnlineMoves(previous, next) {
+    if (!previous || previous.room.round !== next.room.round) return;
+    const history = next.room.history ?? [];
+    const lastSeen = previous.room.history?.[0]?.id;
+    const boundary = lastSeen ? history.findIndex(entry => entry.id === lastSeen) : history.length;
+    if (boundary <= 0) return;
+    const moves = history.slice(0, boundary).reverse();
+    if (moves.some(entry => entry.chkobba?.round !== next.room.round)) return;
+    await roundIntro?.finished;
+    for (const entry of moves) {
+      const { playerId: actorId, chkobba: { card: recorded, taken: captured, handCount } } = entry;
+      const card = onlineCard(recorded);
+      const taken = captured.map(onlineCard);
+      const round = match.current;
+      const actor = next.room.players.find(player => player.id === actorId);
+      if (!actor || !card || taken.some(item => !round.table.includes(item))) break;
+      const isOwnMove = actorId === next.playerId;
+      const seat = isOwnMove ? null : opponentSeat(actorId);
+      const source = isOwnMove ? findCard("hand", card.id) : seat?.querySelector(".opponent-cards .back:last-child") ?? seat;
+      await moveCard(isOwnMove ? 0 : 1, card, taken, source, { actorId, actorName: actor.name, handCount });
+      if (isOwnMove) round.hands[0] = round.hands[0].filter(item => item !== card);
+      round.table = taken.length ? round.table.filter(item => !taken.includes(item)) : [...round.table, card];
+      log = [describeOnlineMove(entry, next.room), ...log].slice(0, 3);
     }
-    const face = ({ rank, suit }) => deckCards.find(card => card.value === rank && card.suit === suit);
+  }
+
+  function applyOnlineTable(next, previous) {
+    onlineTable = next;
+    const { room, playerId, myTurn } = next;
+    const me = room.players.find(player => player.id === playerId);
+    const opponents = room.players.filter(player => player.id !== playerId);
     const roundFinished = room.roundOver || room.phase === "finished";
     const lastResult = room.roundOver && room.roundSummary?.length
       ? { rows: room.roundSummary.map(line => [line]), number: room.round }
@@ -932,18 +978,15 @@ if (typeof document !== "undefined") {
       target: 11, round: room.round, lastResult,
       scores: [me.score ?? 0, Math.max(...opponents.map(player => player.score ?? 0))],
       current: {
-        hands: [(me.chkobbaHand ?? []).map(face), opponents.flatMap(player => player.chkobbaHand ?? [])],
-        table: (room.table ?? []).map(face), deck: room.pile ?? [],
+        hands: [(me.chkobbaHand ?? []).map(onlineCard), opponents.flatMap(player => player.chkobbaHand ?? [])],
+        table: (room.table ?? []).map(onlineCard), deck: room.pile ?? [],
         piles: [me.captured ?? []],
         result: roundFinished, winner: room.phase === "finished" ? (room.winner === playerId ? 0 : 1) : null,
         turn: myTurn ? 0 : 1,
       },
     };
     resetSelection();
-    log = (room.history ?? []).slice(0, 3).map(move => move.text);
-    if (previous && room.history?.[0]?.id !== previous.room.history?.[0]?.id) {
-      playRecording(cardRecording, .042, .42);
-    }
+    log = (room.history ?? []).slice(0, 3).map(entry => describeOnlineMove(entry, room));
     const openedRound = previous ? previous.room.round !== room.round : !room.history?.length;
     if (roundIntro) {
       roundIntro.animations.forEach(animation => animation.cancel());
@@ -957,6 +1000,45 @@ if (typeof document !== "undefined") {
     }
     if (roundFinished) stopHookah();
     else if (!previous || previous.room.round !== room.round) scheduleHookah();
+  }
+
+  async function showOnlineUpdates() {
+    if (replayingOnline) return;
+    replayingOnline = true;
+    let refresh = false;
+    try {
+      while (onlineTable !== latestOnlineTable) {
+        const previous = onlineTable;
+        const next = latestOnlineTable;
+        if (previous?.version === next.version) {
+          onlineTable = next;
+          refresh ||= previous.busy !== next.busy || previous.error !== next.error;
+          continue;
+        }
+        try {
+          await replayOnlineMoves(previous, next);
+        } catch (error) {
+          // The room snapshot is authoritative even if an animation cannot run.
+          console.warn("Could not animate the Chkobba move.", error);
+        } finally {
+          motion?.animations.forEach(animation => animation.cancel());
+          motion = null;
+          applyOnlineTable(next, previous);
+          refresh = true;
+        }
+      }
+    } finally {
+      replayingOnline = false;
+      if (refresh && !roundIntro) render();
+    }
+  }
+
+  function receiveTable(event) {
+    if (event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "chkobba:table") return;
+    const { room, playerId, version, busy, error } = event.data;
+    if (!room.players.some(player => player.id === playerId) || version < (latestOnlineTable?.version ?? 0)) return;
+    latestOnlineTable = { room, playerId, myTurn: room.players[room.turn]?.id === playerId, isHost: room.hostId === playerId, version, busy, error };
+    void showOnlineUpdates();
   }
 
   if (online) {

@@ -16,7 +16,7 @@
 .online-opponents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,88px),1fr));gap:6px;margin-top:8px;text-align:center}
 .cafe-opponent{min-width:0;min-height:78px;padding:6px;border-radius:8px;border:1px solid #dbe6bc59}
 .cafe-opponent.active-seat{border-color:#f2cd85;background:#103e34}
-.cafe-opponent .label{display:block;overflow-wrap:anywhere;margin-bottom:5px;letter-spacing:0;font-size:.8rem}
+.cafe-opponent-label{display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:5px;font-size:.8rem;font-weight:750;overflow-wrap:anywhere}
 .opponent-cards.cards{gap:3px}
 .opponent-cards .card.back{width:clamp(17px,3.6vw,29px);height:clamp(25px,5.3vw,42px);border-width:1px;font-size:.8rem}
 .score > span{display:block}
@@ -1829,6 +1829,6 @@ body {
 </div></main>
 <dialog id="rules"><h2>How to play Chkobba</h2><p id="capture-rule">Play one card per turn. Take one matching card or any group whose values add up to your card. If a capture is available for the card you play, you must take it. Otherwise, leave the card on the table.</p><p>Ace = 1. Cards 2 to 7 are worth their face value.</p><p class="court-values"><span><strong>Q · 8</strong> Mujira <bdi lang="aeb-Arab">مجيرة</bdi></span><span><strong>J · 9</strong> Kawwal <bdi lang="aeb-Arab">كوّال</bdi></span><span><strong>K · 10</strong> Rayy <bdi lang="aeb-Arab">ريّ</bdi></span></p><ul><li><strong>Karta</strong> · most captured cards</li><li><strong>Dineri</strong> · most diamonds</li><li><strong>Bermila</strong> · most sevens, with sixes breaking the tie</li><li><strong>7ayya</strong> · the seven of diamonds</li><li><strong>Chkobba</strong> · one point for clearing the table before the last play</li></ul><p id="match-rule">Tied categories award zero points. At the end of a round, leftover cards go to the last player who captured. If the match scores are tied at or above the target, play another round.</p><form method="dialog"><button class="solid">Back to table</button></form></dialog>
 <dialog id="restart"><h2>Start a new match?</h2><p id="restart-copy"></p><form method="dialog"><button class="outline" value="cancel">Keep playing</button><button class="solid" value="confirm">Start match</button></form></dialog>
-<script src="game.js?v=24"></script>
+<script src="game.js?v=25"></script>
 </body>
 </html>
